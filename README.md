@@ -26,42 +26,82 @@ fiscal years 2023–2025 of 10-K text plus the full XBRL history. Fiscal years f
      SEC data layer: EDGAR submissions · companyfacts XBRL · 10-K inline-XBRL HTML     Knowledge layer: Qdrant · BM25 · PostgreSQL/SQLite
 ```
 
-## Results (gold benchmark, 53 questions)
+## Results
 
-`python -m evaluation.run_benchmark` — latest run (`backend/evaluation/results/`):
+Three question sets, all with expected values cross-checked against raw SEC XBRL facts (`python -m evaluation.crosscheck_gold`):
 
-All five pipelines run with no LLM ($0): A–C answer with the extractive reader (quotes from retrieved text,
-no calculations), D–E with deterministic synthesis over verified evidence.
+| Set | Questions | Written | Used for tuning? |
+|---|---|---|---|
+| Main (`gold/questions.jsonl`) | 108 over 10 companies | 53 with the system, 55 added for the 10-company expansion before the system saw them | yes (it is the development set) |
+| Held-out v1 (`gold/heldout_paraphrase.jsonl`) | 29 paraphrases | after the planner was built | its failures were fixed, so it is no longer blind |
+| Held-out v2 (`gold/heldout_v2.jsonl`) | 20, all 10 companies | after all fixes, [committed before its first run](https://github.com/Sarthakm20/SEC/commit/96c0491) | never |
+
+### Generalization (the honest number)
+
+| | Text-only RAG (C) | This system (E) |
+|---|---|---|
+| Held-out v1, **blind** run | 0.448 | **0.759** right for the right reason (0.828 as scored; 2 "abstentions" were accidental, see below) |
+| 55 new main-set questions, before any fix | — | **0.909** |
+| Held-out v2, **blind** run | 0.350 | **0.950** (19/20) |
+
+The blind runs found real bugs, each fixed with a regression test: "in 2024" was treated as a forecast; "Meta" did not
+resolve to META; older 10-Ks of frequent filers (JPM, META) sat on paginated EDGAR pages that were never read; Walmart's
+table-formatted headings and Alphabet's table-formatted page header broke section parsing; the sufficiency threshold
+had been tuned for a different reranker. Two v1 trap questions ("market cap", "good investment") only *looked*
+correct because that miscalibrated threshold made the answer say "Not available"; fixing the threshold exposed them.
+Held-out v2's one miss: "What is Costco's dividend yield?" is answered instead of refused (dividend yield needs a share price).
+
+### Main set: ablation (108 questions, $0, no LLM)
 
 | Pipeline | Hit@10 | MRR | nDCG@10 | Numeric EM | Citation precision | Correct abstentions | Task success | p50 latency |
 |---|---|---|---|---|---|---|---|---|
-| A · dense → reader | 0.929 | 0.839 | 0.667 | 0.167 | 0.918 | 0.400 | 0.340 | 490 ms |
-| B · BM25 + dense → RRF → reader | 0.929 | 0.827 | 0.677 | 0.250 | **0.941** | 0.400 | 0.415 | 534 ms |
-| C · B + cross-encoder rerank | **1.000** | **0.907** | **0.712** | 0.222 | 0.922 | 0.400 | 0.396 | 2.0 s |
-| D · XBRL + Decimal + verification | 1.000 | 0.907 | 0.712 | **1.000** | 0.921 | **1.000** | 0.943 | 29 ms |
-| E · D + agentic loop (iterative retrieval, sufficiency, repair) | 1.000 | 0.907 | 0.712 | **1.000** | 0.921 | **1.000** | **0.981** | 29 ms |
+| A · dense → reader | 0.913 | 0.792 | 0.589 | 0.143 | 0.870 | 0.50 | 0.287 | 1.5 s |
+| B · BM25 + dense → RRF → reader | 0.957 | 0.829 | 0.617 | 0.208 | 0.880 | 0.30 | 0.343 | 1.6 s |
+| C · B + cross-encoder rerank | 0.913 | 0.744 | 0.607 | 0.208 | 0.891 | 0.30 | 0.333 | 8.9 s |
+| D · XBRL + Decimal + verification | 0.957 | 0.764 | 0.626 | **1.000** | **0.940** | **1.00** | **0.982** | 81 ms |
+| E · D + agentic loop | 0.957 | 0.764 | 0.626 | **1.000** | **0.940** | **1.00** | **0.982** | 97 ms |
 
-| Task success by category | A | B | C | D | E |
-|---|---|---|---|---|---|
-| direct lookup (12) | 0.33 | 0.58 | 0.58 | 1.00 | 1.00 |
-| cross-year (6) | 0.00 | 0.00 | 0.00 | 1.00 | 1.00 |
-| ratio (9) | 0.11 | 0.11 | 0.11 | 1.00 | 1.00 |
-| cross-company (4) | 0.00 | 0.00 | 0.00 | 1.00 | 1.00 |
-| trend (3) | 0.00 | 0.00 | 0.00 | 1.00 | 1.00 |
-| narrative (9) | 0.89 | 1.00 | 0.89 | 0.78 | 1.00 |
-| footnote (3) | 0.67 | 0.67 | 1.00 | 0.67 | 0.67 |
-| multi-hop (2) | 0.50 | 0.50 | 0.00 | 1.00 | 1.00 |
-| unanswerable (5) | 0.40 | 0.40 | 0.40 | 1.00 | 1.00 |
+A–C are from the run before the last three fixes (`benchmark-20261123-022408.json`); D–E after them. Reranker:
+`bge-reranker-base`. Original 53 questions: E = 1.000; the 55 new ones: 0.964.
+
+| Task success by category | n | A | B | C | D | E |
+|---|---|---|---|---|---|---|
+| direct lookup | 25 | 0.32 | 0.44 | 0.48 | 1.00 | 1.00 |
+| cross-year | 12 | 0.00 | 0.00 | 0.00 | 1.00 | 1.00 |
+| ratio | 21 | 0.10 | 0.19 | 0.19 | 1.00 | 1.00 |
+| cross-company | 9 | 0.00 | 0.00 | 0.00 | 1.00 | 1.00 |
+| trend | 8 | 0.00 | 0.00 | 0.00 | 1.00 | 1.00 |
+| narrative | 16 | 0.81 | 0.88 | 0.88 | 0.94 | 0.94 |
+| footnote | 5 | 0.40 | 0.80 | 0.60 | 0.80 | 0.80 |
+| multi-hop | 2 | 0.50 | 0.50 | 0.00 | 1.00 | 1.00 |
+| unanswerable | 10 | 0.50 | 0.30 | 0.30 | 1.00 | 1.00 |
 
 How to read it:
-- **The structured path is the big win.** Text-only RAG gets 17–25% of numeric answers exactly right; with XBRL facts + Decimal calculations it is 100%. Baselines fail mostly on numbers the 10-K never states in prose (free cash flow, debt-to-equity, exact growth rates), on the wrong figure for the right words (Microsoft *Cloud* growth instead of total revenue growth), and on cross-company / multi-year questions.
-- **Abstention** comes from the verification-first design: baselines confidently answer "Tesla's revenue" with NVIDIA passages and "NVIDIA's stock price" with employee-stock-plan text (40% correct abstentions vs. 100%).
-- **Reranking** lifts retrieval (Hit@10 0.93 → 1.00, MRR 0.83 → 0.91) but not end-to-end success for an extractive reader (B 0.415 vs C 0.396): better-ranked passages are not always the ones with quotable figures. Retrieval quality and answer quality need separate measurement, which is the point of the ablation.
-- **E vs. D**: the sufficiency check + query expansion recovers narrative questions where the first retrieval pass is weak (narrative 0.78 → 1.00).
-- Faithfulness is 1.0 for every pipeline and is not shown: verbatim quotes are trivially "supported". Exact match and citation precision are the discriminating metrics here; faithfulness becomes informative once an LLM paraphrases.
-- Remaining E miss (q041, "How does Apple recognize revenue"): the MiniLM reranker ranks Apple's "Basis of presentation" note above the revenue-recognition passage. Trying `RERANKER_MODEL=BAAI/bge-reranker-base` is the next experiment.
+- **The structured path is the big win.** Text-only RAG gets 14–21% of numeric answers exactly right; XBRL facts + `Decimal` math get 100%. Baselines fail on figures the 10-K never states in prose (free cash flow, margins, growth), on the wrong figure for the right words, and on every cross-company and multi-year question.
+- **Abstention** comes from the verification-first design: baselines answer forecasts and market-data questions with whatever text they retrieve (30–50% correct abstentions vs. 100%).
+- **Reranking did not help on this corpus.** C ranks *worse* than B (Hit@10 0.913 vs 0.957, MRR 0.744 vs 0.829) at 5× the latency; on the original 53 questions with MiniLM it had lifted Hit@10 from 0.93 to 1.00. Retrieval and answer quality are measured separately precisely so results like this show up.
+- **E = D on this set.** With `bge-reranker-base` the first retrieval pass is already sufficient, so the sufficiency/expansion loop adds no measured gain here; with the earlier MiniLM reranker it lifted narrative success from 0.78 to 1.00.
+- **Remaining main-set misses:** q059 asks about AWS *segment* sales and gets Amazon's total revenue (segment-level metrics are not in the registry); q108 retrieves the wrong part of Alphabet's tax note.
 
-Gold-set integrity: `python -m evaluation.crosscheck_gold` matches **34/34 reported gold values** exactly against SEC XBRL facts (independent of the QA pipeline); 27 derived values (percentages/ratios) list their formula for human review. Two relevance labels were corrected after inspection and are annotated in the file (`label_note`). Gold values have not yet been signed off by a human reviewer.
+### With an LLM reader (Gemini, free tier)
+
+The critique of the table above is that A–C use a weak extractive reader. So the best text-only pipeline (B) and the
+full system (E) were also run with `gemini-3.5-flash-lite` writing the answers (`benchmark-20261123-043646.json`):
+
+| Pipeline (Gemini reader) | Numeric EM | Correct abstentions | False abstentions | Faithfulness | Answers failing verification | Task success |
+|---|---|---|---|---|---|---|
+| B · hybrid RAG → Gemini | 0.364 | 0.60 | 0.32 | 0.840 | **10 of 108** | 0.491 |
+| E · this system, Gemini writes the prose | **1.000** | **1.00** | 0.02 | **0.987** | 0 | **0.982** |
+
+- An LLM reader lifts text-only RAG from 0.343 to 0.491 task success, but the gap to E stays large: without
+  structured facts the model still cannot produce figures the 10-K never states. **10 of B's answers failed
+  verification** (a number not found in any evidence, or a citation to evidence that does not exist); B reports the
+  verdict but does not enforce it. It also refused 32% of answerable questions.
+- In E, Gemini wrote all 98 answers to answerable questions; the 10 unanswerable ones are refused before any LLM call
+  (that is the "MIXED 98/108" in the report). The verifier and the `Decimal` engine keep numeric accuracy at 1.000
+  whichever model writes the prose. The run cost $0 (about 111k input / 17k output tokens for E).
+- A first attempt with `gemini-3.5-flash` ran out of its free daily quota after about 20 calls; the runner fell back
+  cleanly and the report now says so explicitly (kept as `gemini-3.5-flash-quota-exhausted-*.json`).
 
 ## Quick start (local, no Docker)
 
@@ -86,7 +126,7 @@ Other commands:
 ```bash
 python -m app.cli ingest --tickers AMZN GOOGL --years 2024 2025   # any SEC filer by ticker
 python -m app.cli status
-python -m pytest -q                                               # 74 tests, offline (synthetic company, hash embeddings)
+python -m pytest -q                                               # 81 tests, offline (synthetic company, hash embeddings)
 python -m evaluation.crosscheck_gold                              # gold values vs raw SEC XBRL facts
 python -m evaluation.run_benchmark [--experiments D E] [--limit 20]
 python -m evaluation.run_benchmark --gold evaluation/gold/heldout_paraphrase.jsonl --experiments C E

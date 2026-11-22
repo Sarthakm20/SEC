@@ -12,7 +12,7 @@ Python `Decimal`. The LLM only plans (when the rules are unsure) and writes pros
 
 **Why.** Text-only RAG has to find a figure in prose, and many figures are never stated in prose at all:
 free cash flow, debt-to-equity, exact growth rates. The ablation shows the effect: numeric exact match is
-0.17–0.25 for text-only pipelines A–C and 1.00 once XBRL facts and the `Decimal` engine are used (D/E).
+0.14–0.21 for text-only pipelines A–C on the 108-question set (0.36 even with Gemini as the reader) and 1.00 once XBRL facts and the `Decimal` engine are used (D/E).
 
 **Rejected.** Letting the LLM compute ("chain of thought arithmetic"): it can be right most of the time, but
 it can't be audited, and one wrong digit in a financial answer is a failure.
@@ -99,8 +99,11 @@ example "in 2024" being treated as a forecast. See the README results section fo
 
 **Why.** 10-K language mixes exact terms (BM25 wins: "State Aid", "Activision") and paraphrase (dense wins).
 RRF needs no score calibration between the two, because it only uses ranks. The cross-encoder fixes ordering.
-The ablation keeps retrieval and answer quality separate on purpose: reranking lifted Hit@10 from 0.93 to 1.00
-but did not raise end-to-end success for an extractive reader.
+The ablation keeps retrieval and answer quality separate on purpose, and the reranker's value turned out to
+depend on the question set: on the original 53 questions (MiniLM reranker) it lifted Hit@10 from 0.93 to 1.00,
+but on the 108-question, 10-company set (`bge-reranker-base`) Hit@10 was 0.957 without it and 0.913 with it.
+In neither case did it raise end-to-end success for an extractive reader. It stays in the pipeline for MRR on
+narrative questions, but this result says it should be re-evaluated per corpus, not assumed to help.
 
 **Calibration caveat.** Cross-encoder logits have a different scale per model, so the "is any passage relevant
 enough?" threshold is calibrated per reranker (`RERANKER_SUFFICIENCY_THRESHOLDS` in `app/config.py`), on the main
@@ -114,8 +117,10 @@ gold set only. Switching the default reranker without recalibrating made relevan
 fixed graph nodes with two bounded loops: retrieval expansion (max 2 rounds) and draft repair (max 1).
 
 **Why.** Every path through the graph is enumerable and each node emits a trace event, so a run can be explained
-step by step. Bounded loops give the "agentic" benefit (recovering from weak first retrieval: narrative success
-0.78 → 1.00 from D to E) without unbounded cost or latency.
+step by step. Bounded loops give the "agentic" benefit without unbounded cost or latency. Measured honestly, that
+benefit is conditional: with the MiniLM reranker the sufficiency/expansion loop recovered weak first-pass retrieval
+(narrative success 0.78 → 1.00 from D to E on 53 questions); with `bge-reranker-base` the first pass is already
+sufficient and E = D (0.982) on 108 questions. The repair loop matters only when an LLM writes the draft.
 
 **Code.** `app/graph/workflow.py`.
 
