@@ -88,3 +88,24 @@ def test_chunker_keeps_subsections_and_metadata():
     assert risk and all(c.subsection == "Supply risks" for c in risk)
     assert all(c.page_start == 2 for c in risk)
     assert any(c.kind == "table" for c in chunks)
+
+
+def test_item_headings_laid_out_as_one_row_tables():
+    """Walmart formats headings as tiny tables ("ITEM 1A. | RISK FACTORS"); the TOC table must not count."""
+    from app.ingest.html_parser import parse_10k_html
+
+    body = "Our business depends on many things that could go wrong in various ways. " * 12
+    html = (
+        "<html><body>"
+        "<table><tr><td>Item 1</td><td>Business</td><td>6</td></tr><tr><td>Item 1A</td><td>Risk Factors</td><td>14</td></tr>"
+        "<tr><td>Item 7</td><td>Management's Discussion</td><td>30</td></tr></table>"
+        "<table><tr><td>ITEM 1.</td><td>BUSINESS</td></tr></table>"
+        f"<p>{body}</p>"
+        "<table><tr><td>ITEM 1A.</td><td>RISK FACTORS</td></tr></table>"
+        f"<p>{body}</p><p>{body}</p>"
+        "<table><tr><td>ITEM 7.</td><td>MANAGEMENT'S DISCUSSION AND ANALYSIS</td></tr></table>"
+        f"<p>{body}</p>"
+        "</body></html>"
+    )
+    doc = parse_10k_html(html)
+    assert {"item_1", "item_1a", "item_7"} <= set(doc.sections)

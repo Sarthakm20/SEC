@@ -292,12 +292,24 @@ def _page_labels(blocks: list[Block]) -> dict[int, str]:
     return labels
 
 
+def _heading_text(b: Block) -> str | None:
+    """Text of a block that could be a heading: a short text block, or a short one-row table
+    (some filers, e.g. Walmart, lay out "ITEM 1A. | RISK FACTORS" as a table). Multi-row tables
+    such as the table of contents never qualify."""
+    if b.boilerplate or len(b.text) > 250:
+        return None
+    if b.kind == "text":
+        return b.text
+    if b.kind == "table" and "\n" not in b.text.strip():
+        return b.text.replace(" | ", " ")
+    return None
+
+
 def _detect_sections(blocks: list[Block]) -> dict[str, Section]:
     heads: list[tuple[int, str]] = []  # (block idx, item code)
     for b in blocks:
-        if b.kind != "text" or len(b.text) > 250 or b.boilerplate:
-            continue
-        m = _ITEM_RE.match(b.text)
+        text = _heading_text(b)
+        m = _ITEM_RE.match(text) if text else None
         if m:
             heads.append((b.idx, m.group(1).lower()))
     sections: dict[str, Section] = {}
@@ -323,9 +335,10 @@ def _detect_sections(blocks: list[Block]) -> dict[str, Section]:
         if b.kind == "text" and _NOTES_RE.match(b.text):
             end = len(blocks)
             for b2 in blocks[b.idx + 1 :]:
-                if b2.kind != "text" or len(b2.text) > 250 or b2.boilerplate:
+                t2 = _heading_text(b2)
+                if t2 is None:
                     continue
-                if _NOTES_END_RE.match(b2.text) or _ITEM_RE.match(b2.text):
+                if _NOTES_END_RE.match(t2) or _ITEM_RE.match(t2):
                     end = b2.idx
                     break
             chars = sum(len(blocks[i].text) for i in range(b.idx, end))
