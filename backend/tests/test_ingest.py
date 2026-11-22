@@ -109,3 +109,14 @@ def test_item_headings_laid_out_as_one_row_tables():
     )
     doc = parse_10k_html(html)
     assert {"item_1", "item_1a", "item_7"} <= set(doc.sections)
+
+
+def test_running_header_as_one_row_table_is_boilerplate():
+    """Alphabet repeats 'Table of Contents | Alphabet Inc.' as a one-row table on every page."""
+    from app.ingest.html_parser import parse_10k_html
+
+    page = "<table><tr><td>Table of Contents</td><td>Alphabet Inc.</td></tr></table><p>{}</p><hr style='page-break-after:always'/>"
+    html = "<html><body>" + "".join(page.format(f"Body text for page {i} about income taxes and other matters.") for i in range(8)) + "</body></html>"
+    doc = parse_10k_html(html)
+    headers = [b for b in doc.blocks if "Table of Contents" in b.text]
+    assert headers and all(b.boilerplate for b in headers)

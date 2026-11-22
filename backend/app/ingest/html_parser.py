@@ -404,15 +404,23 @@ def _attach_table_titles(blocks: list[Block]) -> None:
             b.table_title = fallback
 
 
+def _header_candidate(b: Block) -> bool:
+    """Short text lines, and short one-row tables: some filers lay out the running header as a table
+    ("Table of Contents | Alphabet Inc.")."""
+    if len(b.text) > 120:
+        return False
+    return b.kind == "text" or (b.kind == "table" and "\n" not in b.text.strip())
+
+
 def _mark_boilerplate(blocks: list[Block]) -> None:
     """Flag running headers/footers: short lines that recur on many pages (digits normalized)."""
     counts: dict[str, set[int]] = {}
     for b in blocks:
-        if b.kind == "text" and len(b.text) <= 120:
+        if _header_candidate(b):
             key = re.sub(r"\d+", "#", b.text.lower())
             counts.setdefault(key, set()).add(b.page)
     for b in blocks:
-        if b.kind == "text" and len(b.text) <= 120:
+        if _header_candidate(b):
             key = re.sub(r"\d+", "#", b.text.lower())
             if len(counts[key]) >= 5 or re.fullmatch(r"#", key):
                 b.boilerplate = True
