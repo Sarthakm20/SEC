@@ -16,6 +16,17 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 REPO_DIR = BACKEND_DIR.parent
 
+# Calibrated on the MAIN gold set only (the held-out set is never used for tuning):
+#   MiniLM-L6: -2.0 (original benchmark tuning).
+#   bge-reranker-base (2026-11-22): top-1 score of the 14 main-set narrative questions ranged -4.26 … 6.46
+#   (all had a relevant passage); 18 off-topic probes (recipes, sports, weather × 3 companies) scored
+#   -10.19 … -3.68. -4.5 keeps every relevant case and rejects 17/18 off-topic probes.
+RERANKER_SUFFICIENCY_THRESHOLDS: dict[str, float] = {
+    "Xenova/ms-marco-MiniLM-L-6-v2": -2.0,
+    "BAAI/bge-reranker-base": -4.5,
+}
+DEFAULT_SUFFICIENCY_THRESHOLD = -2.0
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -53,7 +64,9 @@ class Settings(BaseSettings):
     rrf_k: int = 60
     chunk_target_tokens: int = 350
     chunk_overlap_tokens: int = 50
-    min_rerank_score_for_sufficiency: float = -2.0  # cross-encoder logits; tuned on benchmark
+    # Cross-encoder logits are on a different scale for each model, so the "is any passage relevant enough?"
+    # threshold is calibrated per reranker (RERANKER_SUFFICIENCY_THRESHOLDS); set this env var to override.
+    min_rerank_score_for_sufficiency: float | None = None
 
     # --- LLM -------------------------------------------------------------------------------------
     llm_provider: str = "auto"  # auto | anthropic | openai | gemini | ollama | offline
@@ -61,6 +74,8 @@ class Settings(BaseSettings):
     llm_effort: str = "medium"  # Anthropic output_config.effort
     llm_max_tokens: int = 4000
     llm_timeout_seconds: float = 120.0
+    llm_min_interval_seconds: float | None = None  # pacing between calls; None -> provider default (gemini 6 s)
+    llm_rate_limit_retries: int = 3  # per-minute 429 retries (waits for the server-suggested delay)
     ollama_base_url: str = "http://localhost:11434/v1"
     anthropic_api_key: str = ""
     openai_api_key: str = ""
@@ -75,6 +90,12 @@ class Settings(BaseSettings):
 
     # --- Agentic loop ----------------------------------------------------------------------------
     max_retrieval_iterations: int = 2
+
+    @property
+    def sufficiency_threshold(self) -> float:
+        if self.min_rerank_score_for_sufficiency is not None:
+            return self.min_rerank_score_for_sufficiency
+        return RERANKER_SUFFICIENCY_THRESHOLDS.get(self.reranker_model, DEFAULT_SUFFICIENCY_THRESHOLD)
 
     @property
     def resolved_database_url(self) -> str:

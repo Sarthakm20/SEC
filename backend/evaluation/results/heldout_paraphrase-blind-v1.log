@@ -1,0 +1,89 @@
+
+=== Experiment C: Reranked RAG: hybrid → cross-encoder → reader
+  h001 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h002 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h003 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h004 [direct_lookup] success=0.0 verdict=verified hit@10=None
+  h005 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h006 [direct_lookup] success=0.0 verdict=verified hit@10=None
+  h007 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h008 [cross_year   ] success=0.0 verdict=verified hit@10=None
+  h009 [cross_year   ] success=0.0 verdict=verified hit@10=None
+  h010 [cross_year   ] success=0.0 verdict=verified hit@10=None
+  h011 [ratio        ] success=0.0 verdict=verified hit@10=None
+  h012 [ratio        ] success=1.0 verdict=verified hit@10=None
+  h013 [ratio        ] success=0.0 verdict=verified hit@10=None
+  h014 [ratio        ] success=0.0 verdict=verified hit@10=None
+  h015 [ratio        ] success=0.0 verdict=verified hit@10=None
+  h016 [ratio        ] success=0.0 verdict=partially_verified hit@10=None
+  h017 [cross_company] success=0.0 verdict=verified hit@10=None
+  h018 [cross_company] success=0.0 verdict=partially_verified hit@10=None
+  h019 [trend        ] success=0.0 verdict=verified hit@10=None
+  h020 [trend        ] success=0.0 verdict=verified hit@10=None
+  h021 [narrative    ] success=1.0 verdict=partially_verified hit@10=1.0
+  h022 [narrative    ] success=1.0 verdict=verified hit@10=1.0
+  h023 [narrative    ] success=1.0 verdict=verified hit@10=1.0
+  h024 [footnote     ] success=1.0 verdict=partially_verified hit@10=1.0
+  h025 [unanswerable ] success=1.0 verdict=insufficient_evidence hit@10=None
+  h026 [unanswerable ] success=0.0 verdict=verified hit@10=None
+  h027 [unanswerable ] success=1.0 verdict=insufficient_evidence hit@10=None
+  h028 [unanswerable ] success=0.0 verdict=partially_verified hit@10=None
+  h029 [unanswerable ] success=1.0 verdict=insufficient_evidence hit@10=None
+
+=== Experiment E: Agentic Financial RAG: D + LangGraph routing, iterative retrieval, sufficiency checks
+  h001 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h002 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h003 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h004 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h005 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h006 [direct_lookup] success=0.0 verdict=verified hit@10=None
+  h007 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  h008 [cross_year   ] success=1.0 verdict=verified hit@10=None
+  h009 [cross_year   ] success=1.0 verdict=verified hit@10=None
+  h010 [cross_year   ] success=1.0 verdict=verified hit@10=None
+  h011 [ratio        ] success=1.0 verdict=verified hit@10=None
+  h012 [ratio        ] success=1.0 verdict=verified hit@10=None
+  h013 [ratio        ] success=0.0 verdict=verified hit@10=None
+  h014 [ratio        ] success=1.0 verdict=verified hit@10=None
+  h015 [ratio        ] success=1.0 verdict=verified hit@10=None
+  h016 [ratio        ] success=1.0 verdict=verified hit@10=None
+  h017 [cross_company] success=1.0 verdict=verified hit@10=None
+  h018 [cross_company] success=1.0 verdict=partially_verified hit@10=None
+  h019 [trend        ] success=0.0 verdict=verified hit@10=None
+  h020 [trend        ] success=1.0 verdict=verified hit@10=None
+  h021 [narrative    ] success=0.0 verdict=partially_verified hit@10=1.0
+  h022 [narrative    ] success=1.0 verdict=verified hit@10=1.0
+  h023 [narrative    ] success=1.0 verdict=verified hit@10=1.0
+  h024 [footnote     ] success=0.0 verdict=partially_verified hit@10=1.0
+  h025 [unanswerable ] success=1.0 verdict=insufficient_evidence hit@10=None
+  h026 [unanswerable ] success=1.0 verdict=insufficient_evidence hit@10=None
+  h027 [unanswerable ] success=1.0 verdict=partially_verified hit@10=None
+  h028 [unanswerable ] success=1.0 verdict=partially_verified hit@10=None
+  h029 [unanswerable ] success=1.0 verdict=partially_verified hit@10=None
+
+# Benchmark report — 2026-11-22T18:13:23.427395+00:00
+
+Questions: 29 · LLM: offline/template-synthesizer · embeddings: fastembed:BAAI/bge-small-en-v1.5 · reranker: fastembed:BAAI/bge-reranker-base · corpus: 2130 chunks
+
+| Exp | Hit@10 | Recall@10 | MRR | nDCG@10 | Numeric EM | Cit. precision | Cit. coverage | Faithfulness | Abstention acc. | Task success | p50 ms | Cost/q $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| C | 1.000 | 0.725 | 1.000 | 0.801 | 0.300 | 0.949 | 0.709 | 1.000 | 0.600 | 0.448 | 8301.7 | 0.000 |
+| E | 1.000 | 0.725 | 1.000 | 0.801 | 0.850 | 0.904 | 0.795 | 1.000 | 1.000 | 0.828 | 53.0 | 0.000 |
+
+Experiments:
+- **C** — Reranked RAG: hybrid → cross-encoder → reader. Answer metrics: computed (extractive reader).
+- **E** — Agentic Financial RAG: D + LangGraph routing, iterative retrieval, sufficiency checks. Answer metrics: computed (deterministic template).
+
+Per-category task success:
+
+| Category | C | E |
+|---|---|---|
+| cross_company | 0.00 | 1.00 |
+| cross_year | 0.00 | 1.00 |
+| direct_lookup | 0.71 | 0.86 |
+| footnote | 1.00 | 0.00 |
+| narrative | 1.00 | 0.67 |
+| ratio | 0.17 | 0.83 |
+| trend | 0.00 | 0.50 |
+| unanswerable | 0.60 | 1.00 |
+

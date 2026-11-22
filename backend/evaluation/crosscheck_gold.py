@@ -12,6 +12,7 @@ with a SHA-256 of the gold file so the UI can tell when the gold set changed aft
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -24,12 +25,17 @@ GOLD = Path(__file__).parent / "gold" / "questions.jsonl"
 RESULT = Path(__file__).parent / "results" / "gold_crosscheck.json"
 
 
-def gold_sha256() -> str:
-    return hashlib.sha256(GOLD.read_bytes()).hexdigest()
+def gold_sha256(gold: Path = GOLD) -> str:
+    return hashlib.sha256(gold.read_bytes()).hexdigest()
 
 
 def main() -> int:
-    items = [json.loads(line) for line in GOLD.read_text(encoding="utf-8").splitlines() if line.strip()]
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--gold", type=Path, default=GOLD)
+    gold = ap.parse_args().gold.resolve()
+    # the main set's result feeds /api/eval/gold; other sets get their own file
+    result = RESULT if gold == GOLD.resolve() else RESULT.with_name(f"{gold.stem}_crosscheck.json")
+    items = [json.loads(line) for line in gold.read_text(encoding="utf-8").splitlines() if line.strip()]
     facts_by_ticker = {}
     ok = bad = derived = 0
     mismatches: list[dict] = []
@@ -67,8 +73,8 @@ def main() -> int:
                 print(f"  [MISMATCH] {it['id']} {exp['label']}: {exp['value']} not found among XBRL facts for {tickers} FY{years}")
     print(f"\nreported values matched: {ok}, mismatched: {bad}, derived values needing formula review: {derived}")
 
-    RESULT.parent.mkdir(parents=True, exist_ok=True)
-    RESULT.write_text(
+    result.parent.mkdir(parents=True, exist_ok=True)
+    result.write_text(
         json.dumps(
             {
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -78,13 +84,14 @@ def main() -> int:
                 "mismatched": bad,
                 "derived_for_review": derived,
                 "mismatches": mismatches,
-                "gold_sha256": gold_sha256(),
+                "gold_file": gold.name,
+                "gold_sha256": gold_sha256(gold),
             },
             indent=2,
         ),
         encoding="utf-8",
     )
-    print(f"summary written to {RESULT}")
+    print(f"summary written to {result}")
     return 1 if bad else 0
 
 

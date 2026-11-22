@@ -3,6 +3,8 @@
   python -m evaluation.run_benchmark                      # all experiments, all questions
   python -m evaluation.run_benchmark --experiments D E --limit 20
   python -m evaluation.run_benchmark --offline            # force deterministic synthesis
+  python -m evaluation.run_benchmark --gold evaluation/gold/heldout_paraphrase.jsonl --experiments E
+                                                          # held-out set: results go to heldout_paraphrase-*.json, latest.json untouched
 
 Retrieval metrics are computed for every experiment. Answer-level metrics for A–C need an LLM
 (those baselines answer from retrieved text only); without one they are reported as n/a.
@@ -48,9 +50,9 @@ def _mean(xs: list) -> float | None:
     return round(sum(xs) / len(xs), 4) if xs else None
 
 
-def run(experiments: list[str], limit: int | None, k: int, offline: bool) -> dict:
+def run(experiments: list[str], limit: int | None, k: int, offline: bool, gold: Path = GOLD) -> dict:
     svc = get_services()
-    items = [json.loads(line) for line in GOLD.read_text(encoding="utf-8").splitlines() if line.strip()]
+    items = [json.loads(line) for line in gold.read_text(encoding="utf-8").splitlines() if line.strip()]
     if limit:
         items = items[:limit]
     chunks = list(svc.retriever.chunks.values())
@@ -59,6 +61,7 @@ def run(experiments: list[str], limit: int | None, k: int, offline: bool) -> dic
     llm_offline = offline or svc.llm.offline
     report: dict = {
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "gold_file": gold.name,
         "questions": len(items),
         "k": k,
         "llm": {"provider": "offline" if llm_offline else svc.llm.provider, "model": "template-synthesizer" if llm_offline else svc.llm.model},
@@ -163,14 +166,19 @@ def main() -> int:
     p.add_argument("--limit", type=int)
     p.add_argument("--k", type=int, default=10)
     p.add_argument("--offline", action="store_true")
+    p.add_argument("--gold", type=Path, default=GOLD, help="gold JSONL file (default: the main 53-question set)")
     args = p.parse_args()
-    report = run(args.experiments, args.limit, args.k, args.offline)
+    gold = args.gold.resolve()
+    report = run(args.experiments, args.limit, args.k, args.offline, gold)
     RESULTS.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    (RESULTS / f"benchmark-{stamp}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    main_set = gold == GOLD.resolve()
+    prefix = "benchmark" if main_set else gold.stem
+    (RESULTS / f"{prefix}-{stamp}.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     md = to_markdown(report)
-    (RESULTS / f"benchmark-{stamp}.md").write_text(md, encoding="utf-8")
-    (RESULTS / "latest.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    (RESULTS / f"{prefix}-{stamp}.md").write_text(md, encoding="utf-8")
+    # latest.json feeds the UI benchmark page and only ever holds the main gold set
+    (RESULTS / ("latest.json" if main_set else f"{gold.stem}-latest.json")).write_text(json.dumps(report, indent=2), encoding="utf-8")
     print("\n" + md)
     svc = get_services()
     if "store" in svc.__dict__:

@@ -266,7 +266,7 @@ def build_graph(ctx: RunContext, checkpointer: Any | None = None):
         if not plan.needs_narrative or plan.query_type == QueryType.OUT_OF_SCOPE:
             return {"expand": False}
         with _timer() as t:
-            threshold = ctx.settings.min_rerank_score_for_sufficiency
+            threshold = ctx.settings.sufficiency_threshold
             missing = []
             for tk in plan.tickers:
                 ps = [p for p in ev.passages.values() if p.chunk.ticker == tk]

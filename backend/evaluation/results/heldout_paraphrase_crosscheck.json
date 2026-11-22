@@ -1,0 +1,11 @@
+{
+  "created_at": "2026-11-22T18:28:46.064708+00:00",
+  "questions": 29,
+  "reported_checked": 25,
+  "matched": 25,
+  "mismatched": 0,
+  "derived_for_review": 8,
+  "mismatches": [],
+  "gold_file": "heldout_paraphrase.jsonl",
+  "gold_sha256": "79494e07b3edbc54f875d0dfd12c8c851a015c6bda67bca70ce083a5df6ebbfb"
+}
