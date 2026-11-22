@@ -49,5 +49,5 @@ def build_llm(settings: Settings | None = None, provider: str | None = None) -> 
             "ollama": "ollama",
         }[choice]
         base = s.ollama_base_url if choice == "ollama" else None
-        return OpenAICompatLLM(choice, s.llm_model or None, key or None, base, s.llm_timeout_seconds)
+        return OpenAICompatLLM(choice, s.llm_model or None, key or None, base, s.llm_timeout_seconds, s.llm_min_interval_seconds, s.llm_rate_limit_retries)
     return OfflineLLM()
