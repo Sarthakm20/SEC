@@ -1,0 +1,13 @@
+# build context for deploy/huggingface/Dockerfile (repo root)
+.git
+.github
+.env
+.env.*
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+**/.next
+**/*.tsbuildinfo
+backend/data
+*.docx
