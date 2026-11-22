@@ -60,7 +60,12 @@ def ingest_company(
     progress(f"[{company.ticker}] {company.name} (CIK {company.cik}), fiscal year end {company.fiscal_year_end}")
 
     facts_json = client.company_facts(company.cik, use_cache=False)
-    filings = list_annual_filings(company, subs, fiscal_year_by_accession(facts_json))
+    filings = list_annual_filings(
+        company, subs, fiscal_year_by_accession(facts_json),
+        # older pages of the submissions index are immutable history, so the disk cache is safe
+        fetch_page=lambda name: client.fetch_json(f"{client.DATA_BASE}/submissions/{name}"),
+        years=list(fiscal_years),
+    )
     facts, conflicts = normalize_company_facts(company, facts_json, filings)
     progress(f"[{company.ticker}] XBRL: {len(facts)} annual facts, {len(conflicts)} restatement conflicts")
 
