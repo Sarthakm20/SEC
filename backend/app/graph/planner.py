@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import date
 
 from app.companies import aliases_for, resolve_tickers
 from app.finance.metrics import DERIVED, REPORTED
@@ -21,14 +22,20 @@ _TREND_WORDS = re.compile(r"\b(trend|over\s+the\s+(last|past)\s+\w+\s+years?|sin
 _ALL_COMPANIES = re.compile(r"\b(which\s+compan(y|ies)|all\s+(three\s+)?compan(y|ies)|across\s+(the\s+)?compan(y|ies)|each\s+compan(y|ies)|these\s+compan(y|ies))\b", re.I)
 _FORECAST = re.compile(
     r"\b(will\s+be|forecast|predict|projection|next\s+(?:fiscal\s+)?years?|forward\s+(?:pe|p/e|estimates?|guidance)|"
-    r"analyst\s+consensus|in\s+20[2-9]\d|stock\s+price|share\s+price|target\s+price|should\s+i\s+(buy|sell|invest))\b",
+    r"analyst\s+consensus|stock\s+price|share\s+price|target\s+price|should\s+i\s+(buy|sell|invest))\b",
     re.I,
 )
+
+
+def _mentions_future_year(years: list[int]) -> bool:
+    """A year after the current calendar year cannot be in any filed 10-K. ("in 2024" is a lookup, not a forecast.)"""
+    return any(y > date.today().year for y in years)
 
 _POSSESSIVE_NAME = re.compile(r"\b([A-Z][A-Za-z0-9&.\-]{1,30})(?:'s|’s)\b")
 _NOT_A_COMPANY = {"what", "it", "that", "there", "here", "who", "where", "how", "let", "today", "year", "company", "management", "industry", "world", "america", "europe", "china", "taiwan"}
 _POLICY_ONLY = re.compile(r"\b(recogni[sz]e[sd]?|accounting\s+polic\w*|account\s+for|policy\s+on|how\s+does\s+\w+\s+(define|measure|treat))\b", re.I)
 _NUMERIC_ASK = re.compile(r"\b(how\s+much|what\s+(was|were|is|are)\s+(the\s+)?(\w+'s\s+)?(total|amount|revenue|net|operating|gross|free|r&d|diluted)|amount|figure|value|grow|growth|change[ds]?|increase|decrease|compare|trend|margin|ratio)\b", re.I)
+_SHARE_OF_REVENUE = re.compile(r"\b(percent(age)?|share|proportion|fraction|%)\s+of\s+(its\s+|their\s+|total\s+)?(revenue|net\s+sales|sales)\b", re.I)
 _RISK_CUE = re.compile(r"\brisks?\b|\bthreats?\b|\bvulnerab", re.I)
 
 
@@ -144,6 +151,9 @@ def rule_plan(
     years, ynotes = extract_years(question, pool)
     notes += ynotes
     metrics = extract_metrics(question)
+    if "rd_expense" in metrics and _SHARE_OF_REVENUE.search(question):
+        # "what percentage of revenue went to R&D" asks for the ratio, not two separate amounts
+        metrics = ["rd_intensity"] + [m for m in metrics if m not in ("rd_expense", "revenue", "rd_intensity")]
     if not metrics and is_followup and previous:
         metrics = list(previous.metrics)
         if metrics:
@@ -190,7 +200,7 @@ def rule_plan(
         qtype = QueryType.OUT_OF_SCOPE
         tickers = []
         notes.append(f"'{stranger}' is not among the ingested companies ({', '.join(c.ticker for c in companies)}); run ingestion for it first")
-    elif _FORECAST.search(question) and not needs_narrative:
+    elif (_FORECAST.search(question) or _mentions_future_year(years)) and not needs_narrative:
         qtype = QueryType.OUT_OF_SCOPE
         notes.append("forecasts, stock prices and investment advice are not contained in 10-K filings")
     elif not tickers:

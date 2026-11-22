@@ -37,6 +37,25 @@ def test_rule_plan(q, qtype, tickers, metrics):
         assert any(p.startswith(m) for p in plan.metrics)
 
 
+@pytest.mark.parametrize(
+    "q,qtype",
+    [
+        # a plain past year ("in 2024") is a lookup, not a forecast
+        ("What was Apple's revenue in 2024?", QueryType.FACT_LOOKUP),
+        ("What was Microsoft's gross margin in 2025?", QueryType.RATIO),
+        ("How much net income did NVIDIA report in 2023?", QueryType.FACT_LOOKUP),
+        # a year after the current calendar year is a forecast
+        ("What will Apple's revenue be in 2031?", QueryType.OUT_OF_SCOPE),
+        ("What is Microsoft's net income in 2031?", QueryType.OUT_OF_SCOPE),
+        # "percentage of revenue spent on R&D" is the R&D-intensity ratio
+        ("What percentage of its revenue did Apple spend on research and development in 2024?", QueryType.RATIO),
+    ],
+)
+def test_plain_years_are_not_forecasts(q, qtype):
+    plan, _ = rule_plan(q, COMPANIES, AVAIL)
+    assert plan.query_type == qtype
+
+
 def test_year_extraction():
     assert extract_years("from FY2022 to FY2024", [2025])[0] == [2022, 2023, 2024]
     assert extract_years("over the last three years", [2023, 2024, 2025])[0] == [2023, 2024, 2025]
@@ -77,3 +96,11 @@ def test_fiscal_range_and_risk_sections():
     assert plan.fiscal_years == [2023, 2024, 2025]
     risk, _ = rule_plan("What risks related to artificial intelligence does Microsoft describe in fiscal 2024?", COMPANIES, AVAIL)
     assert risk.sections == ["item_1a"]
+
+
+def test_sufficiency_threshold_follows_reranker():
+    from app.config import Settings
+
+    assert Settings(reranker_model="BAAI/bge-reranker-base", min_rerank_score_for_sufficiency=None).sufficiency_threshold == -4.5
+    assert Settings(reranker_model="Xenova/ms-marco-MiniLM-L-6-v2", min_rerank_score_for_sufficiency=None).sufficiency_threshold == -2.0
+    assert Settings(reranker_model="BAAI/bge-reranker-base", min_rerank_score_for_sufficiency=-1.0).sufficiency_threshold == -1.0
