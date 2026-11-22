@@ -22,7 +22,11 @@ _TREND_WORDS = re.compile(r"\b(trend|over\s+the\s+(last|past)\s+\w+\s+years?|sin
 _ALL_COMPANIES = re.compile(r"\b(which\s+compan(y|ies)|all\s+(three\s+)?compan(y|ies)|across\s+(the\s+)?compan(y|ies)|each\s+compan(y|ies)|these\s+compan(y|ies))\b", re.I)
 _FORECAST = re.compile(
     r"\b(will\s+be|forecast|predict|projection|next\s+(?:fiscal\s+)?years?|forward\s+(?:pe|p/e|estimates?|guidance)|"
-    r"analyst\s+consensus|stock\s+price|share\s+price|target\s+price|should\s+i\s+(buy|sell|invest))\b",
+    r"analyst\s+consensus|stock\s+price|share\s+price|target\s+price|should\s+i\s+(buy|sell|invest|hold))\b"
+    # market data and investment advice are not in a 10-K ("invest in" alone is not matched:
+    # "how does Apple plan to invest in AI" is a legitimate narrative question)
+    r"|\bmarket\s+cap(italization)?\b|\bp\s*/\s*e\b|\bprice[- ]to[- ]earnings\b|\bvaluation\s+multiple"
+    r"|\b(good|bad|smart|safe|wise)\s+investment\b|\bworth\s+(buying|investing|owning)\b|\b(buy|sell)\s+(the\s+)?stock\b",
     re.I,
 )
 

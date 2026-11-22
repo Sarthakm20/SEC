@@ -26,7 +26,7 @@ SEED_ALIASES: dict[str, list[str]] = {
     "META": ["meta", "meta platforms", "facebook"],
     "JPM": ["jpmorgan", "jp morgan", "jpmorgan chase", "jpm"],
     "WMT": ["walmart", "wal-mart", "wmt"],
-    "COST": ["costco", "costco wholesale"],
+    "COST": ["costco", "costco wholesale"],  # never "cost": it is an ordinary word
     "ORCL": ["oracle", "orcl"],
 }
 
@@ -54,6 +54,10 @@ def resolve_tickers(text: str, companies: list[Company]) -> list[str]:
             # tickers must match as upper-case whole words to avoid e.g. "now" style collisions
             if alias == company.ticker.lower():
                 m = re.search(rf"\b{re.escape(company.ticker)}\b", text)
+                if m is None and alias in company.name.lower().split():
+                    # the ticker is also the company's common name ("Meta"): accept the capitalized word,
+                    # but not lower-case prose ("meta-analysis")
+                    m = re.search(rf"\b{re.escape(alias.capitalize())}(?:'s|’s)?\b", text)
             else:
                 m = re.search(rf"\b{re.escape(alias)}(?:'s|’s)?\b", lowered)
             if m and (best is None or m.start() < best):

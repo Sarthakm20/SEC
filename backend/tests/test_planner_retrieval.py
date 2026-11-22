@@ -104,3 +104,33 @@ def test_sufficiency_threshold_follows_reranker():
     assert Settings(reranker_model="BAAI/bge-reranker-base", min_rerank_score_for_sufficiency=None).sufficiency_threshold == -4.5
     assert Settings(reranker_model="Xenova/ms-marco-MiniLM-L-6-v2", min_rerank_score_for_sufficiency=None).sufficiency_threshold == -2.0
     assert Settings(reranker_model="BAAI/bge-reranker-base", min_rerank_score_for_sufficiency=-1.0).sufficiency_threshold == -1.0
+
+
+def test_company_whose_name_is_its_ticker():
+    """'Meta' must resolve to META even though the alias equals the ticker; lower-case 'meta' in prose must not."""
+    from app.models import Company
+
+    meta = Company(ticker="META", cik=1326801, name="Meta Platforms, Inc.")
+    cs = COMPANIES + [meta]
+    assert resolve_tickers("Which had the higher operating margin: Meta or Apple?", cs) == ["META", "AAPL"]
+    assert resolve_tickers("META revenue 2025", cs) == ["META"]
+    assert resolve_tickers("a meta-analysis of Apple's risks", cs) == ["AAPL"]
+
+
+@pytest.mark.parametrize(
+    "q",
+    [
+        "What is Microsoft's market cap today?",
+        "Is Apple a good investment right now?",
+        "What is NVIDIA's P/E ratio?",
+        "Is Microsoft stock worth buying?",
+    ],
+)
+def test_market_data_and_advice_are_out_of_scope(q):
+    plan, _ = rule_plan(q, COMPANIES, AVAIL)
+    assert plan.query_type == QueryType.OUT_OF_SCOPE
+
+
+def test_investment_plans_are_still_narrative():
+    plan, _ = rule_plan("How does Apple plan to invest in artificial intelligence?", COMPANIES, AVAIL)
+    assert plan.query_type != QueryType.OUT_OF_SCOPE
