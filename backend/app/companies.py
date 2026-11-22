@@ -18,6 +18,16 @@ SEED_ALIASES: dict[str, list[str]] = {
     "AAPL": ["apple", "apple inc", "aapl"],
     "MSFT": ["microsoft", "microsoft corp", "microsoft corporation", "msft"],
     "NVDA": ["nvidia", "nvidia corp", "nvidia corporation", "nvda"],
+    # Common names differ from SEC's registrant names ("Amazon.com, Inc.", "Meta Platforms, Inc.", ...).
+    # Aliases only apply once a company is ingested. Tesla and Netflix are deliberately not ingested:
+    # they are the "company not in the corpus" abstention cases in the gold sets.
+    "AMZN": ["amazon", "amazon.com", "amzn"],
+    "GOOGL": ["alphabet", "google", "googl"],
+    "META": ["meta", "meta platforms", "facebook"],
+    "JPM": ["jpmorgan", "jp morgan", "jpmorgan chase", "jpm"],
+    "WMT": ["walmart", "wal-mart", "wmt"],
+    "COST": ["costco", "costco wholesale"],
+    "ORCL": ["oracle", "orcl"],
 }
 
 _CORP_SUFFIX = re.compile(r"\b(inc|corp|corporation|co|company|ltd|plc|holdings)\.?$", re.I)

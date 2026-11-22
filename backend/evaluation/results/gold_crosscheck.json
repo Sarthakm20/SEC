@@ -1,10 +1,11 @@
 {
-  "created_at": "2026-11-07T05:39:00.142759+00:00",
-  "questions": 53,
-  "reported_checked": 34,
-  "matched": 34,
+  "created_at": "2026-11-22T19:32:05.502368+00:00",
+  "questions": 108,
+  "reported_checked": 105,
+  "matched": 105,
   "mismatched": 0,
-  "derived_for_review": 27,
+  "derived_for_review": 45,
   "mismatches": [],
-  "gold_sha256": "7dc21c2a512df8194236c7a04a75e7381c2d118af1f41c6a83be8c24d9c2d044"
+  "gold_file": "questions.jsonl",
+  "gold_sha256": "614654d393e2dcc5e7fe96e77d3e3b4665c43b9eadfef3932863742e2b81de13"
 }
