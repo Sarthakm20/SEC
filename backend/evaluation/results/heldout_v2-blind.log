@@ -1,0 +1,71 @@
+
+=== Experiment C: Reranked RAG: hybrid → cross-encoder → reader
+  v001 [direct_lookup] success=0.0 verdict=partially_verified hit@10=None
+  v002 [direct_lookup] success=0.0 verdict=verified hit@10=None
+  v003 [direct_lookup] success=0.0 verdict=verified hit@10=None
+  v004 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  v005 [direct_lookup] success=0.0 verdict=verified hit@10=None
+  v006 [cross_year   ] success=0.0 verdict=verified hit@10=None
+  v007 [cross_year   ] success=1.0 verdict=verified hit@10=None
+  v008 [ratio        ] success=0.0 verdict=verified hit@10=None
+  v009 [ratio        ] success=0.0 verdict=verified hit@10=None
+  v010 [ratio        ] success=0.0 verdict=verified hit@10=None
+  v011 [trend        ] success=0.0 verdict=partially_verified hit@10=None
+  v012 [cross_company] success=0.0 verdict=verified hit@10=None
+  v013 [narrative    ] success=1.0 verdict=partially_verified hit@10=1.0
+  v014 [narrative    ] success=1.0 verdict=verified hit@10=1.0
+  v015 [narrative    ] success=1.0 verdict=verified hit@10=1.0
+  v016 [footnote     ] success=1.0 verdict=verified hit@10=1.0
+  v017 [unanswerable ] success=0.0 verdict=partially_verified hit@10=None
+  v018 [unanswerable ] success=1.0 verdict=insufficient_evidence hit@10=None
+  v019 [unanswerable ] success=0.0 verdict=verified hit@10=None
+  v020 [unanswerable ] success=0.0 verdict=verified hit@10=None
+
+=== Experiment E: Agentic Financial RAG: D + LangGraph routing, iterative retrieval, sufficiency checks
+  v001 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  v002 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  v003 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  v004 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  v005 [direct_lookup] success=1.0 verdict=verified hit@10=None
+  v006 [cross_year   ] success=1.0 verdict=verified hit@10=None
+  v007 [cross_year   ] success=1.0 verdict=verified hit@10=None
+  v008 [ratio        ] success=1.0 verdict=verified hit@10=None
+  v009 [ratio        ] success=1.0 verdict=verified hit@10=None
+  v010 [ratio        ] success=1.0 verdict=verified hit@10=None
+  v011 [trend        ] success=1.0 verdict=verified hit@10=None
+  v012 [cross_company] success=1.0 verdict=verified hit@10=None
+  v013 [narrative    ] success=1.0 verdict=verified hit@10=1.0
+  v014 [narrative    ] success=1.0 verdict=verified hit@10=1.0
+  v015 [narrative    ] success=1.0 verdict=verified hit@10=1.0
+  v016 [footnote     ] success=1.0 verdict=verified hit@10=1.0
+  v017 [unanswerable ] success=0.0 verdict=verified hit@10=None
+  v018 [unanswerable ] success=1.0 verdict=insufficient_evidence hit@10=None
+  v019 [unanswerable ] success=1.0 verdict=insufficient_evidence hit@10=None
+  v020 [unanswerable ] success=1.0 verdict=insufficient_evidence hit@10=None
+
+# Benchmark report — 2026-11-22T21:55:58.916821+00:00
+
+Questions: 20 · LLM: offline/template-synthesizer · embeddings: fastembed:BAAI/bge-small-en-v1.5 · reranker: fastembed:BAAI/bge-reranker-base · corpus: 9578 chunks
+
+| Exp | Hit@10 | Recall@10 | MRR | nDCG@10 | Numeric EM | Cit. precision | Cit. coverage | Faithfulness | Abstention acc. | Task success | p50 ms | Cost/q $ |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| C | 1.000 | 0.725 | 1.000 | 0.773 | 0.167 | 0.983 | 0.709 | 1.000 | 0.250 | 0.350 | 11381.4 | 0.000 |
+| E | 1.000 | 0.725 | 1.000 | 0.773 | 1.000 | 0.956 | 0.838 | 1.000 | 0.750 | 0.950 | 75.0 | 0.000 |
+
+Experiments:
+- **C** — Reranked RAG: hybrid → cross-encoder → reader. Answer metrics: computed (extractive reader).
+- **E** — Agentic Financial RAG: D + LangGraph routing, iterative retrieval, sufficiency checks. Answer metrics: computed (deterministic template).
+
+Per-category task success:
+
+| Category | C | E |
+|---|---|---|
+| cross_company | 0.00 | 1.00 |
+| cross_year | 0.50 | 1.00 |
+| direct_lookup | 0.20 | 1.00 |
+| footnote | 1.00 | 1.00 |
+| narrative | 1.00 | 1.00 |
+| ratio | 0.00 | 1.00 |
+| trend | 0.00 | 1.00 |
+| unanswerable | 0.25 | 0.75 |
+

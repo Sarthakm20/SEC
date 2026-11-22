@@ -1,12 +1,16 @@
 # SEC 10-K Verifiable Financial Intelligence Platform
 
+[![CI](https://github.com/Sarthakm20/SEC/actions/workflows/ci.yml/badge.svg)](https://github.com/Sarthakm20/SEC/actions/workflows/ci.yml)
+
 Answers questions about SEC 10-K filings with **numbers you can audit**. Reported figures come from SEC
 XBRL (the filer's own tagged values), every derived metric is computed in Python `Decimal` with a
 recorded formula, narrative context comes from hybrid retrieval over the 10-K text, and a
 deterministic verification layer checks every citation and every number in the answer before it is shown.
 
 Built from `SEC_Filing_Agentic_RAG_Blueprint.docx` and `SEC_Filing_Agentic_RAG_Recommendations_with_Visuals.docx`.
-Initial scope follows Recommendations §9.1: Apple, Microsoft and NVIDIA, fiscal years 2023–2025.
+Scope: 10 companies across tech, retail and banking (AAPL, MSFT, NVDA, AMZN, GOOGL, META, ORCL, WMT, COST, JPM),
+fiscal years 2023–2025 of 10-K text plus the full XBRL history. Fiscal years follow each filer's convention
+(Walmart ends in January, Oracle in May, Costco in August/September). Design rationale: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md).
 
 ```
                      Next.js + Tailwind + Recharts  (Overview · Research assistant · Compare · Inspector · Benchmark)
@@ -82,10 +86,14 @@ Other commands:
 ```bash
 python -m app.cli ingest --tickers AMZN GOOGL --years 2024 2025   # any SEC filer by ticker
 python -m app.cli status
-python -m pytest -q                                               # 59 tests, offline (synthetic company, hash embeddings)
-python -m evaluation.crosscheck_gold
+python -m pytest -q                                               # 74 tests, offline (synthetic company, hash embeddings)
+python -m evaluation.crosscheck_gold                              # gold values vs raw SEC XBRL facts
 python -m evaluation.run_benchmark [--experiments D E] [--limit 20]
+python -m evaluation.run_benchmark --gold evaluation/gold/heldout_paraphrase.jsonl --experiments C E
+python -m app.cli test-llm                                        # check the configured LLM key + model
 ```
+
+CI (GitHub Actions) runs the tests, the frontend typecheck/build, and builds all three Docker images on every push.
 
 Embedded Qdrant allows one process per storage folder; the benchmark automatically works on a snapshot copy so it can run while the API is up.
 
@@ -96,6 +104,17 @@ cp .env.example .env    # set SEC_USER_AGENT (and an LLM key if wanted)
 docker compose up -d --build
 docker compose exec backend python -m app.cli ingest
 # UI http://localhost:3000 · API http://localhost:8000/docs
+```
+
+## Public demo (Hugging Face Spaces, free CPU tier)
+
+`deploy/huggingface/` builds one container: the Next.js UI on port 7860 proxying to FastAPI, with a read-only
+snapshot of the ingested data. The demo runs `LLM_PROVIDER=offline`, so visitors cannot spend an API quota.
+
+```bash
+pip install -U huggingface_hub && hf auth login          # token with write access
+# create a Space at https://huggingface.co/new-space  (SDK: Docker, Blank)
+bash deploy/huggingface/push_space.sh <hf-username>/<space-name>
 ```
 
 ## LLM configuration (optional — the platform runs at $0 without one)
@@ -113,11 +132,17 @@ has no scope routing, so they are measured end to end at $0.
 | Ollama | free, local | `LLM_PROVIDER=ollama`, `LLM_MODEL` | Needs a GPU or a fast CPU and ≥16 GB RAM to be practical |
 | Anthropic / OpenAI | paid | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | Anthropic default `claude-opus-5-5` with refusal fallback |
 
-Using Gemini for free: create an API key at Google AI Studio (a Gemini app subscription does not include API
-access), then set `LLM_PROVIDER=gemini`, `GEMINI_API_KEY=…` and `LLM_MODEL=<a current free model>` in `.env` and
-restart the API. A full benchmark makes roughly 260+ LLM calls and may hit free-tier rate limits; failed calls
-fall back to the template/extractive reader, and the report's `readers_used` shows exactly which reader answered
-each question (flagged as MIXED when they differ). Use `--limit 20` or `--experiments A E` for smaller runs.
+Using Gemini for free: create **one** API key at Google AI Studio (a Gemini app subscription does not include API
+access; free-tier limits are per project, so extra keys add nothing). Set `LLM_PROVIDER=gemini`, `GEMINI_API_KEY=…`
+and `LLM_MODEL=gemini-3.5-flash-lite` in `.env`, run `python -m app.cli test-llm`, and restart the API. Free-tier
+quotas are per model: `gemini-3.5-flash` ran out after about 20 requests in a day, `gemini-3.5-flash-lite` handled a full benchmark. Older models
+return 404 "no longer available to new users"; a 503 means "high demand, retry later".
+
+Free-tier handling is built in: calls are paced (`LLM_MIN_INTERVAL_SECONDS`, default 6 s), per-minute 429s wait for
+the delay Google suggests, and a used-up *daily* quota fails fast. Failed calls fall back to the template/extractive
+reader, and the report's `readers_used` shows exactly which reader answered each question (flagged as MIXED when
+they differ). A full benchmark is several hundred calls; run one experiment at a time (`--experiments A`) if the
+daily quota runs out.
 
 The LLM only (a) plans when the rule-based planner is unsure and (b) writes prose. It never does arithmetic,
 and its draft must pass verification: a draft with an unsupported number or an invalid citation is sent back
@@ -154,18 +179,22 @@ backend/
   app/graph/          planner, evidence registry, synthesis, LangGraph workflow, entry point
   app/llm/            Anthropic / OpenAI-compatible / offline providers, usage tracking
   app/api/            FastAPI app, security
-  evaluation/         gold questions, metrics, cross-check, benchmark runner, results
+  evaluation/         gold questions (main + held-out), metrics, cross-check, benchmark runner, results
   tests/              unit + end-to-end tests
 frontend/             Next.js app (Overview, Research assistant, Compare, Inspector, Benchmark)
+deploy/huggingface/   single-container demo for Hugging Face Spaces
+docs/                 DESIGN_DECISIONS.md: the main design choices and their trade-offs
+.github/workflows/    CI
 docker-compose.yml    postgres, qdrant, backend, frontend
 ```
 
 ## Known limitations
 
 - Without an LLM, baselines A–C use the extractive reader, a weaker reader than an LLM would be; with a (free) Gemini key the same benchmark measures LLM-read baselines instead.
-- The default reranker (MiniLM-L6) is chosen for CPU speed; `BAAI/bge-reranker-base` is likely better and slower.
-- Fiscal-year labels follow each filer's convention (NVIDIA's FY2025 ended January 2025); comparisons say so explicitly.
+- The default reranker is `BAAI/bge-reranker-base` (~1 GB, about 8 s per reranked question on a laptop CPU). `RERANKER_MODEL=Xenova/ms-marco-MiniLM-L-6-v2` is much faster. The sufficiency threshold is calibrated per reranker.
+- The rule-based planner is brittle to phrasing it has not seen; the held-out set measures this (see Results).
+- Fiscal-year labels follow each filer's convention (NVIDIA's FY2025 ended January 2025); comparisons say so explicitly. XBRL facts can be newer than the ingested 10-K text (FY2026 facts exist for several filers), so "latest" may resolve to a year with numbers but no narrative.
+- JPMorgan's 10-K titles its MD&A "Management's discussion and analysis" rather than "Item 7", so JPM has no `item_7` section; MD&A questions for JPM fall back to other sections.
 - Restated values: the original filing's value is canonical and later restatements are flagged (e.g. NVIDIA's split-adjusted EPS).
 - Debt-to-equity uses term debt + commercial paper + short-term borrowings (excludes leases); the definition is shown with every result.
-- Docker images were written but not built in this environment (Docker daemon not running); the local setup was tested end to end.
-- The gold set is 53 questions; Blueprint §5 targets 100–150 after the initial scope is measured.
+- Gold values are cross-checked against raw XBRL and each lists its 10-K line item, but they have not yet been signed off by a human reviewer.

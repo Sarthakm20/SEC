@@ -99,8 +99,15 @@ def run(experiments: list[str], limit: int | None, k: int, offline: bool, gold: 
         agg = _aggregate(per_q, k)
         used = {r.get("reader_used") for r in per_q if r.get("reader_used")}
         agg["readers_used"] = {m: sum(1 for r in per_q if r.get("reader_used") == m) for m in sorted(used)}
-        mixed = " — MIXED: some LLM calls failed and fell back" if len(used) > 1 else ""
-        agg["answer_metrics"] = f"computed ({reader}){mixed}"
+        n_llm = agg["readers_used"].get("llm", 0)
+        if reader != "llm" or n_llm == len(per_q):
+            note = ""
+        elif n_llm == 0:
+            # every LLM call failed (e.g. a used-up daily quota): these are NOT LLM results
+            note = f" — NO LLM ANSWERS: all {len(per_q)} answers came from fallback readers {agg['readers_used']}"
+        else:
+            note = f" — MIXED: only {n_llm}/{len(per_q)} answers from the LLM, the rest fell back {agg['readers_used']}"
+        agg["answer_metrics"] = f"computed ({reader}){note}"
         report["experiments"][exp] = {"description": cfg.description, "reader": reader, "summary": agg, "per_question": per_q}
     return report
 
@@ -166,7 +173,8 @@ def main() -> int:
     p.add_argument("--limit", type=int)
     p.add_argument("--k", type=int, default=10)
     p.add_argument("--offline", action="store_true")
-    p.add_argument("--gold", type=Path, default=GOLD, help="gold JSONL file (default: the main 53-question set)")
+    p.add_argument("--gold", type=Path, default=GOLD, help="gold JSONL file (default: the main question set)")
+    p.add_argument("--no-latest", action="store_true", help="keep latest.json (the UI's report) unchanged, e.g. for LLM experiments")
     args = p.parse_args()
     gold = args.gold.resolve()
     report = run(args.experiments, args.limit, args.k, args.offline, gold)
@@ -178,7 +186,8 @@ def main() -> int:
     md = to_markdown(report)
     (RESULTS / f"{prefix}-{stamp}.md").write_text(md, encoding="utf-8")
     # latest.json feeds the UI benchmark page and only ever holds the main gold set
-    (RESULTS / ("latest.json" if main_set else f"{gold.stem}-latest.json")).write_text(json.dumps(report, indent=2), encoding="utf-8")
+    if not args.no_latest:
+        (RESULTS / ("latest.json" if main_set else f"{gold.stem}-latest.json")).write_text(json.dumps(report, indent=2), encoding="utf-8")
     print("\n" + md)
     svc = get_services()
     if "store" in svc.__dict__:
