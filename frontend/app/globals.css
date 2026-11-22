@@ -1,0 +1,399 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------------------------
+   Tokens. Ink-on-filing-paper in light mode; the navy of the mockups in dark mode.
+   Status colors are reserved for verification verdicts. Series colors follow the company.
+   --------------------------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --paper: #f2f4f7;
+  --panel: #ffffff;
+  --panel-2: #f7f8fb;
+  --rule: #d8dee8;
+  --rule-strong: #b9c3d3;
+  --ink: #13203a;
+  --ink-2: #44506a;
+  --muted: #6b7890;
+  --accent: #1f56c4;
+  --accent-ink: #ffffff;
+  --accent-soft: #e4ecfb;
+  --focus: #1f56c4;
+
+  --ok: #0f7a55;
+  --ok-soft: #e2f3ec;
+  --warn: #9a6100;
+  --warn-soft: #fbf0dc;
+  --fail: #b4321e;
+  --fail-soft: #fbe6e2;
+  --none: #5d6779;
+  --none-soft: #eceef2;
+
+  --series-1: #2a78d6; /* AAPL */
+  --series-2: #eb6834; /* MSFT */
+  --series-3: #1baf7a; /* NVDA */
+  --grid: #e6eaf0;
+
+  --chip-fact: #13203a;
+  --chip-calc: #1f56c4;
+  --chip-src: #6b7890;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --paper: #0d1524;
+    --panel: #131e33;
+    --panel-2: #172440;
+    --rule: #24324d;
+    --rule-strong: #34466a;
+    --ink: #e7ecf4;
+    --ink-2: #b3bed1;
+    --muted: #8392ab;
+    --accent: #6ea1ff;
+    --accent-ink: #0d1524;
+    --accent-soft: #1b2c4f;
+    --focus: #8cb4ff;
+    --ok: #4cc795;
+    --ok-soft: #133528;
+    --warn: #e7b04a;
+    --warn-soft: #3a2c10;
+    --fail: #f0806b;
+    --fail-soft: #3d1a14;
+    --none: #a3adbf;
+    --none-soft: #222c3f;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --grid: #1f2c45;
+    --chip-fact: #e7ecf4;
+    --chip-calc: #6ea1ff;
+    --chip-src: #8392ab;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #0d1524;
+  --panel: #131e33;
+  --panel-2: #172440;
+  --rule: #24324d;
+  --rule-strong: #34466a;
+  --ink: #e7ecf4;
+  --ink-2: #b3bed1;
+  --muted: #8392ab;
+  --accent: #6ea1ff;
+  --accent-ink: #0d1524;
+  --accent-soft: #1b2c4f;
+  --focus: #8cb4ff;
+  --ok: #4cc795;
+  --ok-soft: #133528;
+  --warn: #e7b04a;
+  --warn-soft: #3a2c10;
+  --fail: #f0806b;
+  --fail-soft: #3d1a14;
+  --none: #a3adbf;
+  --none-soft: #222c3f;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --grid: #1f2c45;
+  --chip-fact: #e7ecf4;
+  --chip-calc: #6ea1ff;
+  --chip-src: #8392ab;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-rule: var(--rule);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif4), Georgia, serif;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+body {
+  font-family: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.num {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.prose-answer {
+  font-family: var(--font-serif4), Georgia, serif;
+  font-size: 17px;
+  line-height: 1.62;
+  max-width: 68ch;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* panels: hierarchy by elevation of the rule, not by identical cards */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+.inset {
+  background: var(--panel-2);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  font-weight: 500;
+  font-size: 14px;
+  border: 1px solid var(--rule-strong);
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+.btn:hover {
+  border-color: var(--accent);
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.field {
+  border: 1px solid var(--rule-strong);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  font-size: 14px;
+}
+
+/* the signature element: provenance chips on cited evidence */
+.cite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6em;
+  height: 1.35em;
+  padding: 0 0.3em;
+  margin: 0 0.08em;
+  border-radius: 4px;
+  font-family: var(--font-plex), sans-serif;
+  font-size: 0.68em;
+  font-weight: 600;
+  vertical-align: 0.35em;
+  line-height: 1;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform 120ms ease;
+}
+.cite-F {
+  background: var(--chip-fact);
+  color: var(--panel);
+}
+.cite-C {
+  border-color: var(--chip-calc);
+  color: var(--chip-calc);
+  background: transparent;
+}
+.cite-S {
+  border-color: var(--chip-src);
+  color: var(--chip-src);
+  border-style: dashed;
+  background: transparent;
+}
+.cite-bad {
+  background: var(--fail-soft);
+  color: var(--fail);
+  border-color: var(--fail);
+  text-decoration: line-through;
+}
+.cite[data-active="true"] {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px var(--focus);
+}
+.evidence-active {
+  box-shadow: 0 0 0 2px var(--focus);
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+table.data th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+table.data td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+table.data tr:last-child td {
+  border-bottom: none;
+}
+table.data td.r,
+table.data th.r {
+  text-align: right;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Motion & interaction primitives
+   --------------------------------------------------------------------------------------------- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.pop {
+  animation: pop 140ms ease-out both;
+}
+.stagger > * {
+  animation: rise 300ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.stagger > *:nth-child(2) { animation-delay: 40ms; }
+.stagger > *:nth-child(3) { animation-delay: 80ms; }
+.stagger > *:nth-child(4) { animation-delay: 120ms; }
+.stagger > *:nth-child(5) { animation-delay: 160ms; }
+.stagger > *:nth-child(n + 6) { animation-delay: 200ms; }
+
+.skeleton {
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--panel-2) 25%, var(--rule) 50%, var(--panel-2) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+kbd,
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  padding: 0 0.35em;
+  height: 1.5em;
+  border: 1px solid var(--rule-strong);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink-2);
+  font-family: var(--font-plex), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  padding: 0.3rem 0.75rem;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  background: var(--panel);
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+.chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.chip[aria-pressed="true"],
+.chip[aria-selected="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.popover {
+  background: var(--panel);
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.28);
+}
+
+/* a clickable table row that reveals detail */
+tr.row-click {
+  cursor: pointer;
+}
+tr.row-click:hover td {
+  background: var(--panel-2);
+}
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+th.sortable:hover {
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
