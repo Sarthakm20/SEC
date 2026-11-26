@@ -9,8 +9,10 @@ deterministic verification layer checks every citation and every number in the a
 
 Built from `SEC_Filing_Agentic_RAG_Blueprint.docx` and `SEC_Filing_Agentic_RAG_Recommendations_with_Visuals.docx`.
 Scope: 10 companies across tech, retail and banking (AAPL, MSFT, NVDA, AMZN, GOOGL, META, ORCL, WMT, COST, JPM),
-fiscal years 2023–2025 of 10-K text plus the full XBRL history. Fiscal years follow each filer's convention
-(Walmart ends in January, Oracle in May, Costco in August/September). Design rationale: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md).
+10-K text for each filer's four latest fiscal years (FY2023–2026; FY2022–2025 for the calendar-year filers AMZN,
+GOOGL, META and JPM, whose FY2026 10-K is not out yet) plus the full XBRL history. Fiscal years follow each filer's
+convention (Walmart ends in January, Oracle in May, Costco in August/September). The benchmark results below were
+measured on the FY2023–2025 text, before the extra year was added. Design rationale: [`docs/DESIGN_DECISIONS.md`](docs/DESIGN_DECISIONS.md).
 
 ```
                      Next.js + Tailwind + Recharts  (Overview · Research assistant · Compare · Inspector · Benchmark)
@@ -113,7 +115,10 @@ cp .env.example .env            # set SEC_USER_AGENT="YourApp you@example.com" (
 cd backend
 python -m venv .venv && .venv/Scripts/activate      # Windows; on macOS/Linux: source .venv/bin/activate
 pip install -r requirements.lock.txt
-python -m app.cli ingest                            # AAPL, MSFT, NVDA × FY2023–2025 (~10 min on CPU, downloads ~150 MB of models)
+# full corpus used by the UI: all 10 companies, four fiscal years each (~50 min on CPU, downloads ~150 MB of models)
+python -m app.cli ingest --tickers AAPL MSFT NVDA ORCL WMT COST --years 2023 2024 2025 2026
+python -m app.cli ingest --tickers AMZN GOOGL META JPM --years 2022 2023 2024 2025
+# or a quick start: python -m app.cli ingest   (AAPL, MSFT, NVDA × FY2023–2025, ~10 min)
 python -m app.cli ask "How did Apple's revenue change in fiscal 2025 compared to fiscal 2024?"
 uvicorn app.api.main:app --port 8000
 
@@ -142,7 +147,7 @@ Embedded Qdrant allows one process per storage folder; the benchmark automatical
 ```bash
 cp .env.example .env    # set SEC_USER_AGENT (and an LLM key if wanted)
 docker compose up -d --build
-docker compose exec backend python -m app.cli ingest
+docker compose exec backend python -m app.cli ingest     # quick start; for the full corpus run the two ingest commands above via exec
 # UI http://localhost:3000 · API http://localhost:8000/docs
 ```
 
@@ -233,7 +238,7 @@ docker-compose.yml    postgres, qdrant, backend, frontend
 - Without an LLM, baselines A–C use the extractive reader, a weaker reader than an LLM would be; with a (free) Gemini key the same benchmark measures LLM-read baselines instead.
 - The default reranker is `BAAI/bge-reranker-base` (~1 GB, about 8 s per reranked question on a laptop CPU). `RERANKER_MODEL=Xenova/ms-marco-MiniLM-L-6-v2` is much faster. The sufficiency threshold is calibrated per reranker.
 - The rule-based planner is brittle to phrasing it has not seen; the held-out set measures this (see Results).
-- Fiscal-year labels follow each filer's convention (NVIDIA's FY2025 ended January 2025); comparisons say so explicitly. XBRL facts can be newer than the ingested 10-K text (FY2026 facts exist for several filers), so "latest" may resolve to a year with numbers but no narrative.
+- Fiscal-year labels follow each filer's convention (NVIDIA's FY2025 ended January 2025); comparisons say so explicitly. XBRL facts cover more years than the ingested 10-K text; the Overview only offers years whose text is ingested, and questions about other years are answered from XBRL figures without narrative.
 - JPMorgan's 10-K titles its MD&A "Management's discussion and analysis" rather than "Item 7", so JPM has no `item_7` section; MD&A questions for JPM fall back to other sections.
 - Restated values: the original filing's value is canonical and later restatements are flagged (e.g. NVIDIA's split-adjusted EPS).
 - Debt-to-equity uses term debt + commercial paper + short-term borrowings (excludes leases); the definition is shown with every result.
