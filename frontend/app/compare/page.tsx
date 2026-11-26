@@ -16,7 +16,7 @@ export default function ComparePage() {
   const [align, setAlign] = useState<"fiscal" | "calendar">("fiscal");
   const [data, setData] = useState<Comparison | null>(null);
   const [chartMetric, setChartMetric] = useState("operating_margin");
-  const [filterQuery, setFilterQuery] = useState("");
+  const [filterMetric, setFilterMetric] = useState(""); // "" shows every metric
   const [focusCell, setFocusCell] = useState<{ metric: string; ticker: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,12 +48,9 @@ export default function ComparePage() {
 
   const filteredRows = useMemo(() => {
     if (!data?.rows) return [];
-    if (!filterQuery.trim()) return data.rows;
-    const q = filterQuery.toLowerCase();
-    return data.rows.filter(
-      (r) => r.label.toLowerCase().includes(q) || r.metric.toLowerCase().includes(q)
-    );
-  }, [data?.rows, filterQuery]);
+    if (!filterMetric) return data.rows;
+    return data.rows.filter((r) => r.metric === filterMetric);
+  }, [data?.rows, filterMetric]);
 
   // ↑/↓ step the charted metric through the visible rows
   useKeydown((e) => {
@@ -186,13 +183,26 @@ export default function ComparePage() {
 
           {/* Quick metric search input */}
           <div className="ml-auto">
-            <input
-              type="text"
-              placeholder="Search metrics..."
-              value={filterQuery}
-              onChange={(e) => setFilterQuery(e.target.value)}
-              className="field text-xs py-1 px-2.5 w-44 placeholder:text-[var(--muted)]"
-            />
+            <select
+              className="field w-48 text-xs"
+              value={filterMetric}
+              onChange={(e) => {
+                const m = e.target.value;
+                setFilterMetric(m);
+                if (m) {
+                  setChartMetric(m);
+                  setFocusCell(null);
+                }
+              }}
+              aria-label="Show metrics"
+            >
+              <option value="">All metrics</option>
+              {data?.rows.map((r) => (
+                <option key={r.metric} value={r.metric}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
           </div>
           </div>
         </div>
@@ -297,7 +307,7 @@ export default function ComparePage() {
                   {filteredRows.length === 0 && (
                     <tr>
                       <td colSpan={picked.length + 1} className="text-center py-6 text-sm text-[var(--muted)]">
-                        No metrics matching &ldquo;{filterQuery}&rdquo;
+                        No values for this metric
                       </td>
                     </tr>
                   )}
