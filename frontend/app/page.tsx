@@ -56,10 +56,8 @@ export default function OverviewPage() {
   }, [ticker, fy]);
 
   const company = companies.find((c) => c.ticker === ticker);
-  // an older year picked from a trend chart joins the year control while it is selected
-  const years = company
-    ? Array.from(new Set([...company.years.filings, ...company.years.facts.slice(-4), ...(fy !== null && company.years.facts.includes(fy) ? [fy] : [])])).sort((a, b) => b - a)
-    : [];
+  // only years whose 10-K text is ingested, so every year shows its indexed sections
+  const years = company ? [...company.years.filings].sort((a, b) => b - a) : [];
 
   const pickCompany = (t: string) => {
     if (t === ticker) return;
@@ -104,33 +102,26 @@ export default function OverviewPage() {
             </button>
           ))}
         </div>
-        <span className="hidden text-[11px] text-[var(--muted)] sm:inline">
-          <kbd>←</kbd> <kbd>→</kbd> to switch
-        </span>
         <div className="ml-auto flex items-center gap-2 text-sm text-[var(--ink-2)]">
           <span className="hidden sm:inline">Fiscal year</span>
           <div className="inline-flex rounded-lg border border-[var(--rule-strong)] p-0.5" role="radiogroup" aria-label="Fiscal year">
             {years
               .slice()
               .sort((a, b) => a - b)
-              .map((y) => {
-                const textOnly = !company?.years.filings.includes(y);
-                return (
-                  <button
-                    key={y}
-                    role="radio"
-                    aria-checked={fy === y}
-                    onClick={() => setFy(y)}
-                    title={textOnly ? "Figures only: the 10-K text for this year is not ingested" : `FY${y} 10-K`}
-                    className={`num rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      fy === y ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-xs" : "text-[var(--ink-2)] hover:bg-[var(--panel-2)]"
-                    }`}
-                  >
-                    FY{String(y).slice(-2)}
-                    {textOnly && <span className="ml-0.5 opacity-60">°</span>}
-                  </button>
-                );
-              })}
+              .map((y) => (
+                <button
+                  key={y}
+                  role="radio"
+                  aria-checked={fy === y}
+                  onClick={() => setFy(y)}
+                  title={`FY${y} 10-K`}
+                  className={`num rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                    fy === y ? "bg-[var(--accent)] text-[var(--accent-ink)] shadow-xs" : "text-[var(--ink-2)] hover:bg-[var(--panel-2)]"
+                  }`}
+                >
+                  FY{String(y).slice(-2)}
+                </button>
+              ))}
           </div>
         </div>
       </div>
@@ -181,7 +172,7 @@ export default function OverviewPage() {
                   activeLabel={`FY${data.fiscal_year}`}
                   onSelect={(label) => {
                     const y = Number(label.replace("FY", ""));
-                    if (company?.years.facts.includes(y)) setFy(y);
+                    if (company?.years.filings.includes(y)) setFy(y);
                   }}
                 />
               </div>
@@ -191,8 +182,8 @@ export default function OverviewPage() {
           <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
             <section className="panel p-5">
               <h2 className="font-serif text-xl font-semibold">Ratios</h2>
-              <p className="text-sm text-[var(--muted)]">Computed with Python Decimal from reported XBRL facts. Click a row to see the inputs.</p>
-              <table className="data mt-3">
+              <p className="text-[15px] text-[var(--muted)]">Computed with Python Decimal from reported XBRL facts. Click a row to see the inputs.</p>
+              <table className="data mt-3 !text-base">
                 <thead>
                   <tr>
                     <th>Metric</th>
@@ -222,9 +213,7 @@ export default function OverviewPage() {
                   </a>
                 </>
               ) : (
-                <p className="mt-2 text-sm text-[var(--muted)]">
-                  This fiscal year has XBRL figures but its 10-K text was not ingested. Run <code>python -m app.cli ingest --years {data.fiscal_year}</code> to add it.
-                </p>
+                <p className="mt-2 text-sm text-[var(--muted)]">No 10-K text is indexed for FY{data.fiscal_year}.</p>
               )}
             </section>
           </div>
@@ -292,8 +281,8 @@ function RatioRow({ r, company, fy }: { r: MetricValue; company: string; fy: num
         aria-expanded={expandable ? open : undefined}
       >
         <td className="whitespace-nowrap font-medium">{r.label}</td>
-        <td className="r num">{r.display ?? "—"}</td>
-        <td className="text-xs text-[var(--ink-2)]">{r.error ?? calc?.definition}</td>
+        <td className="r num font-semibold">{r.display ?? "—"}</td>
+        <td className="text-[15px] leading-snug text-[var(--ink-2)]">{r.error ?? calc?.definition}</td>
         <td className="w-6 text-[var(--muted)]">
           {expandable && (
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" className={`transition-transform ${open ? "rotate-180" : ""}`} aria-hidden>
@@ -305,7 +294,7 @@ function RatioRow({ r, company, fy }: { r: MetricValue; company: string; fy: num
       {open && calc && (
         <tr>
           <td colSpan={4} className="!border-b !pt-0">
-            <div className="rise inset mt-1 p-3 text-xs">
+            <div className="rise inset mt-1 p-3 text-sm">
               <code className="block text-[var(--ink-2)]">
                 {calc.formula} = <strong className="text-[var(--ink)]">{calc.display}</strong>
               </code>

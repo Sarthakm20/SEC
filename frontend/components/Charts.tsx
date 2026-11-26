@@ -143,15 +143,44 @@ export function PipelineBars({
   );
 }
 
-/** One measure per chart (never dual-axis); bar color follows the company. */
-export function CompareBars({ data, unit, label }: { data: { ticker: string; value: number }[]; unit: "percent" | "usd" | "ratio"; label: string }) {
-  const fmt = (v: number) => (unit === "percent" ? `${(v * 100).toFixed(1)}%` : unit === "usd" ? `$${(v / 1e9).toFixed(1)}B` : v.toFixed(2));
+/**
+ * One measure per chart (never dual-axis); bar color follows the company.
+ * A null value keeps the company on the x-axis with no bar; tickers in `dim` (not selected) get a faded label.
+ */
+export function CompareBars({
+  data,
+  unit,
+  label,
+  dim = [],
+}: {
+  data: { ticker: string; value: number | null }[];
+  unit: "percent" | "usd" | "ratio";
+  label: string;
+  dim?: string[];
+}) {
+  const fmt = (v: number | null) =>
+    v === null || v === undefined || Number.isNaN(v)
+      ? "—"
+      : unit === "percent"
+      ? `${(v * 100).toFixed(1)}%`
+      : unit === "usd"
+      ? `$${(v / 1e9).toFixed(1)}B`
+      : v.toFixed(2);
+  const tick = (props: unknown) => {
+    const p = props as { x: number; y: number; payload: { value: string } };
+    const off = dim.includes(p.payload.value);
+    return (
+      <text x={p.x} y={p.y + 12} textAnchor="middle" fontSize={12} fill="var(--muted)" opacity={off ? 0.45 : 1}>
+        {p.payload.value}
+      </text>
+    );
+  };
   return (
-    <div className="h-56 w-full" role="img" aria-label={`${label} by company`}>
+    <div className="h-64 w-full" role="img" aria-label={`${label} by company`}>
       <ResponsiveContainer>
         <BarChart data={data} margin={{ top: 18, right: 8, bottom: 0, left: 0 }} barCategoryGap="30%">
           <CartesianGrid stroke="var(--grid)" vertical={false} />
-          <XAxis dataKey="ticker" {...axis} />
+          <XAxis dataKey="ticker" {...axis} tick={tick} interval={0} />
           <YAxis {...axis} axisLine={false} width={56} tickFormatter={fmt} />
           <Tooltip content={<TooltipBox fmt={fmt} />} cursor={{ fill: "var(--panel-2)" }} />
           <Bar
@@ -161,9 +190,10 @@ export function CompareBars({ data, unit, label }: { data: { ticker: string; val
             name={label}
             radius={[4, 4, 0, 0]}
             maxBarSize={56}
-            label={{ position: "top", fill: "var(--ink-2)", fontSize: 12, formatter: (v: unknown) => fmt(Number(v)) }}
+            label={{ position: "top", fill: "var(--ink-2)", fontSize: 12, formatter: (v: unknown) => (v === null || v === undefined ? "" : fmt(Number(v))) }}
             shape={(props: unknown) => {
-              const p = props as { x: number; y: number; width: number; height: number; payload: { ticker: string } };
+              const p = props as { x: number; y: number; width: number; height: number; payload: { ticker: string; value: number | null } };
+              if (p.payload.value === null || !Number.isFinite(p.height)) return <g />;
               const h = Math.max(p.height, 0);
               const r = Math.min(4, h);
               const { x, y, width: w } = p;

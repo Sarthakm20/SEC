@@ -3,7 +3,7 @@ import { ms } from "@/lib/format";
 import { StatusDot } from "./Verdict";
 
 // Observable system steps — never the model's private reasoning.
-export function Trace({ events, compact = false }: { events: TraceEvent[]; compact?: boolean }) {
+export function Trace({ events, compact = false, skipReasons = false }: { events: TraceEvent[]; compact?: boolean; skipReasons?: boolean }) {
   return (
     <ol className="relative flex flex-col gap-2.5">
       {events.map((e, i) => (
@@ -12,6 +12,9 @@ export function Trace({ events, compact = false }: { events: TraceEvent[]; compa
           <div className="min-w-0 flex-1">
             <div className={`text-sm ${e.status === "skip" ? "text-[var(--muted)]" : ""}`}>{e.label}</div>
             {!compact && <TraceDetail e={e} />}
+            {skipReasons && e.status === "skip" && typeof (e.detail as Record<string, unknown>)?.reason === "string" && (
+              <div className="mt-0.5 text-xs text-[var(--muted)]">{String((e.detail as Record<string, unknown>).reason).replace(/^\w/, (c) => c.toUpperCase())}</div>
+            )}
           </div>
           {e.duration_ms > 0 && <span className="num shrink-0 text-xs text-[var(--muted)]">{ms(e.duration_ms)}</span>}
         </li>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { CommandPalette, openPalette } from "./CommandPalette";
+import { CommandPalette } from "./CommandPalette";
 
 const NAV = [
   { href: "/", label: "Overview", icon: "M3 13h4v8H3zM10 9h4v12h-4zM17 4h4v17h-4z" },
@@ -92,22 +92,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </span>
           </div>
         </Link>
-
-        {/* Command palette trigger */}
-        <button
-          type="button"
-          onClick={openPalette}
-          className="mb-3 flex items-center gap-2 rounded-lg border border-[var(--rule)] bg-[var(--panel-2)] px-3 py-2 text-sm text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--ink)]"
-          aria-label="Open command palette"
-          title="Search pages and ask questions (Ctrl+K)"
-        >
-          <Icon d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16 16l5 5" />
-          <span className="hidden flex-1 text-left lg:inline">Search or ask…</span>
-          <span className="hidden items-center gap-0.5 lg:flex">
-            <kbd>Ctrl</kbd>
-            <kbd>K</kbd>
-          </span>
-        </button>
 
         {/* Navigation Links */}
         <nav className="flex flex-1 flex-col gap-1" aria-label="Main">

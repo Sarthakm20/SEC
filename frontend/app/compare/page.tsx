@@ -68,10 +68,12 @@ export default function ComparePage() {
 
   const chartRow = data?.rows.find((r) => r.metric === chartMetric);
   const focused = focusCell && chartRow?.metric === focusCell.metric ? chartRow.values[focusCell.ticker] : undefined;
+  // every company keeps its place on the x-axis; unpicked ones (or missing values) get no bar
   const chartData = chartRow
-    ? picked
-        .filter((t) => chartRow.values[t]?.value !== null && chartRow.values[t]?.value !== undefined)
-        .map((t) => ({ ticker: t, value: Number(chartRow.values[t].value) }))
+    ? companies.map((c) => {
+        const v = picked.includes(c.ticker) ? chartRow.values[c.ticker]?.value : null;
+        return { ticker: c.ticker, value: v === null || v === undefined ? null : Number(v) };
+      })
     : [];
 
   const exportCSV = () => {
@@ -92,7 +94,7 @@ export default function ComparePage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl pb-12">
+    <div className="mx-auto max-w-7xl pb-12">
       <div className="border-b border-[var(--rule)] pb-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -109,8 +111,8 @@ export default function ComparePage() {
         </div>
 
         {/* Filters and Controls */}
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <div className="flex gap-2" role="group" aria-label="Companies">
+        <div className="mt-5 flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Companies">
             {companies.map((c) => {
               const on = picked.includes(c.ticker);
               return (
@@ -145,8 +147,10 @@ export default function ComparePage() {
             })}
           </div>
 
+          {/* period controls sit on their own row so a longer year label never reflows them */}
+          <div className="flex flex-wrap items-center gap-3">
           <select
-            className="field num text-xs"
+            className="field num w-36 text-xs"
             value={fy}
             onChange={(e) => setFy(Number(e.target.value))}
             aria-label="Year"
@@ -190,6 +194,7 @@ export default function ComparePage() {
               className="field text-xs py-1 px-2.5 w-44 placeholder:text-[var(--muted)]"
             />
           </div>
+          </div>
         </div>
       </div>
 
@@ -208,25 +213,31 @@ export default function ComparePage() {
             </div>
           )}
 
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1.35fr_1fr]">
-            {/* Side-by-side Table */}
-            <section className="panel overflow-x-auto p-2 shadow-sm">
-              <table className="data">
+          <div className="mt-6 space-y-6">
+            {/* Side-by-side Table: every picked company fits in one panel, no horizontal scrolling */}
+            <section className="panel p-2 shadow-sm">
+              <table className="data table-fixed">
+                <colgroup>
+                  <col className="w-44" />
+                  {picked.map((t) => (
+                    <col key={t} />
+                  ))}
+                </colgroup>
                 <thead>
                   <tr>
-                    <th>Financial Metric</th>
+                    <th className="!px-2 align-bottom">Financial Metric</th>
                     {picked.map((t) => (
-                      <th key={t} className="r">
-                        <span className="inline-flex items-center gap-1.5">
+                      <th key={t} className="r !px-2">
+                        <span className="flex items-center justify-end gap-1.5">
                           <span
-                            className="h-2 w-2 rounded-full"
+                            className="h-2 w-2 shrink-0 rounded-full"
                             style={{ background: seriesVar(t) }}
                             aria-hidden
                           />
-                          <span className="font-semibold">{t}</span>{" "}
-                          <span className="num font-normal text-[11px] text-[var(--muted)]">
-                            FY{data.resolved_fiscal_years[t]}
-                          </span>
+                          <span className="font-semibold text-[var(--ink)]">{t}</span>
+                        </span>
+                        <span className="num block text-[11px] font-normal text-[var(--muted)]">
+                          FY{data.resolved_fiscal_years[t] ?? fy}
                         </span>
                       </th>
                     ))}
@@ -251,7 +262,7 @@ export default function ComparePage() {
                           setFocusCell(null);
                         }}
                       >
-                        <td>
+                        <td className="!px-2">
                           <button
                             className="text-left font-medium text-[var(--ink)] hover:text-[var(--accent)] flex items-center gap-1.5 group"
                             onClick={(e) => {
@@ -295,7 +306,8 @@ export default function ComparePage() {
             </section>
 
             {/* Interactive Chart */}
-            <section className="panel p-5 shadow-sm">
+            <section className="panel grid grid-cols-1 gap-6 p-5 shadow-sm lg:grid-cols-[1.7fr_1fr]">
+              <div>
               <div className="flex items-center justify-between border-b border-[var(--rule)] pb-3">
                 <label className="text-xs font-semibold text-[var(--ink)]" htmlFor="metric">
                   Visual Comparison Chart
@@ -315,9 +327,10 @@ export default function ComparePage() {
               </div>
 
               <div className="mt-4">
-                {chartData.length ? (
+                {chartData.some((d) => d.value !== null) ? (
                   <CompareBars
                     data={chartData}
+                    dim={companies.map((c) => c.ticker).filter((t) => !picked.includes(t))}
                     unit={
                       PERCENT.has(chartMetric)
                         ? "percent"
@@ -333,12 +346,14 @@ export default function ComparePage() {
                   </p>
                 )}
               </div>
+              </div>
 
+              <div>
               {focused && focusCell ? (
                 <CellBreakdown v={focused} ticker={focusCell.ticker} onClose={() => setFocusCell(null)} />
               ) : (
                 chartRow && (
-                  <div className="mt-4 rounded-lg bg-[var(--panel-2)] p-3 text-xs text-[var(--ink-2)] border border-[var(--rule)]">
+                  <div className="rounded-lg bg-[var(--panel-2)] p-3 text-xs text-[var(--ink-2)] border border-[var(--rule)]">
                     <span className="font-semibold block text-[var(--ink)]">Methodology:</span>
                     <span className="mt-0.5 block">
                       {Object.values(chartRow.values).find((v) => v.calculation)?.calculation?.definition ??
@@ -350,6 +365,7 @@ export default function ComparePage() {
                   </div>
                 )
               )}
+              </div>
             </section>
           </div>
         </>
@@ -387,7 +403,7 @@ function Cell({
         }}
         aria-pressed={focused}
         aria-label={`${ticker} ${v.label}: ${v.display ?? "not available"}. Show breakdown`}
-        className={`group relative block w-full px-3 py-[0.55rem] text-right transition-colors hover:bg-[var(--panel-2)] ${focused ? "outline-2 -outline-offset-2 outline-[var(--accent)]" : ""}`}
+        className={`group relative block w-full whitespace-nowrap px-2 py-[0.55rem] text-right transition-colors hover:bg-[var(--panel-2)] ${focused ? "outline-2 -outline-offset-2 outline-[var(--accent)]" : ""}`}
       >
         {/* relative-size bar in the company's color */}
         {ratio > 0 && (

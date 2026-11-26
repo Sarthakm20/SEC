@@ -166,7 +166,7 @@ def compare(
     metrics: str | None = None,
     align: Literal["fiscal", "calendar"] = "fiscal",
 ) -> dict:
-    ts = [_ticker_or_404(t.strip()) for t in tickers.split(",") if t.strip()][:6]
+    ts = [_ticker_or_404(t.strip()) for t in tickers.split(",") if t.strip()][:20]
     ms = [m.strip() for m in metrics.split(",")] if metrics else COMPARISON_METRICS
     unknown = [m for m in ms if m not in REPORTED and m not in DERIVED and not m.endswith("_growth")]
     if unknown:
