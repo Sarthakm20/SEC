@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------------------------
-   Tokens. Ink-on-filing-paper in light mode; the navy of the mockups in dark mode.
+   Tokens. One light theme: pale filing-blue paper, white panels, a single blue accent.
    Status colors are reserved for verification verdicts. Series colors follow the company.
    --------------------------------------------------------------------------------------------- */
 :root {
   color-scheme: light;
-  --paper: #f2f4f7;
+  --paper: #f3f6fb;
   --panel: #ffffff;
-  --panel-2: #f7f8fb;
-  --rule: #d8dee8;
-  --rule-strong: #b9c3d3;
+  --panel-2: #f5f8fd;
+  --rule: #dfe6f0;
+  --rule-strong: #c2cddd;
   --ink: #13203a;
   --ink-2: #44506a;
-  --muted: #6b7890;
+  --muted: #66738b;
   --accent: #1f56c4;
   --accent-ink: #ffffff;
   --accent-soft: #e4ecfb;
@@ -36,69 +36,14 @@
   --chip-fact: #13203a;
   --chip-calc: #1f56c4;
   --chip-src: #6b7890;
-}
 
-@media (prefers-color-scheme: dark) {
-  :root:where(:not([data-theme="light"])) {
-    color-scheme: dark;
-    --paper: #0d1524;
-    --panel: #131e33;
-    --panel-2: #172440;
-    --rule: #24324d;
-    --rule-strong: #34466a;
-    --ink: #e7ecf4;
-    --ink-2: #b3bed1;
-    --muted: #8392ab;
-    --accent: #6ea1ff;
-    --accent-ink: #0d1524;
-    --accent-soft: #1b2c4f;
-    --focus: #8cb4ff;
-    --ok: #4cc795;
-    --ok-soft: #133528;
-    --warn: #e7b04a;
-    --warn-soft: #3a2c10;
-    --fail: #f0806b;
-    --fail-soft: #3d1a14;
-    --none: #a3adbf;
-    --none-soft: #222c3f;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --grid: #1f2c45;
-    --chip-fact: #e7ecf4;
-    --chip-calc: #6ea1ff;
-    --chip-src: #8392ab;
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --paper: #0d1524;
-  --panel: #131e33;
-  --panel-2: #172440;
-  --rule: #24324d;
-  --rule-strong: #34466a;
-  --ink: #e7ecf4;
-  --ink-2: #b3bed1;
-  --muted: #8392ab;
-  --accent: #6ea1ff;
-  --accent-ink: #0d1524;
-  --accent-soft: #1b2c4f;
-  --focus: #8cb4ff;
-  --ok: #4cc795;
-  --ok-soft: #133528;
-  --warn: #e7b04a;
-  --warn-soft: #3a2c10;
-  --fail: #f0806b;
-  --fail-soft: #3d1a14;
-  --none: #a3adbf;
-  --none-soft: #222c3f;
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --series-3: #199e70;
-  --grid: #1f2c45;
-  --chip-fact: #e7ecf4;
-  --chip-calc: #6ea1ff;
-  --chip-src: #8392ab;
+  /* the backdrop: wave fill, guilloché strands and 10-K microprint */
+  --wave-1: #d8e5f9;
+  --wave-2: #e7effb;
+  --wave-line: #bed2f1;
+  --watermark: #b3c7e6;
+
+  --shadow-panel: 0 1px 2px rgb(19 45 99 / 0.05), 0 10px 28px -16px rgb(19 45 99 / 0.18);
 }
 
 @theme inline {
@@ -141,11 +86,12 @@ body {
   border-radius: 4px;
 }
 
-/* panels: hierarchy by elevation of the rule, not by identical cards */
+/* panels: white sheets lifted off the paper by a soft blue-tinted shadow */
 .panel {
   background: var(--panel);
   border: 1px solid var(--rule);
-  border-radius: 10px;
+  border-radius: 14px;
+  box-shadow: var(--shadow-panel);
 }
 .inset {
   background: var(--panel-2);
@@ -258,6 +204,32 @@ table.data tr:last-child td {
 table.data td.r,
 table.data th.r {
   text-align: right;
+}
+
+/* ---------------------------------------------------------------------------------------------
+   Backdrop: a soft blue wave across the top of every page, crossed by a guilloché band edged with
+   microprint from a Form 10-K (see components/Backdrop.tsx).
+   --------------------------------------------------------------------------------------------- */
+.backdrop {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 380px;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+.backdrop > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.microprint {
+  fill: var(--watermark);
+  font-family: var(--font-serif4), Georgia, serif;
+  font-size: 7.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
 /* ---------------------------------------------------------------------------------------------

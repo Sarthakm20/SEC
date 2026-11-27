@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { Backdrop } from "./Backdrop";
 import { CommandPalette } from "./CommandPalette";
 
 const NAV = [
@@ -19,39 +20,6 @@ function Icon({ d }: { d: string }) {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d={d} />
     </svg>
-  );
-}
-
-function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark" | null>(null);
-  useEffect(() => {
-    const read = () => {
-      const t = document.documentElement.dataset.theme as "light" | "dark" | undefined;
-      setTheme(t ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
-    };
-    read();
-    // the command palette can flip the theme too
-    window.addEventListener("theme-change", read);
-    return () => window.removeEventListener("theme-change", read);
-  }, []);
-  if (!theme) return null;
-  const next = theme === "dark" ? "light" : "dark";
-  return (
-    <button
-      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-[var(--ink-2)] hover:bg-[var(--panel-2)] transition-colors"
-      onClick={() => {
-        document.documentElement.dataset.theme = next;
-        try {
-          localStorage.setItem("theme", next);
-        } catch {
-          /* storage unavailable */
-        }
-        setTheme(next);
-      }}
-    >
-      <Icon d={theme === "dark" ? "M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" : "M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"} />
-      <span className="hidden lg:inline">{theme === "dark" ? "Light theme" : "Dark theme"}</span>
-    </button>
   );
 }
 
@@ -148,16 +116,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-        {/* Theme Toggle Button */}
-        <div className="mt-3 border-t border-[var(--rule)] pt-2">
-          <ThemeToggle />
-        </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main key={path} className="rise min-w-0 flex-1 px-4 py-6 sm:px-8">
-        {children}
-      </main>
+      {/* Main Content Area: the backdrop sits outside <main> so it doesn't replay the page transition */}
+      <div className="relative isolate min-w-0 flex-1">
+        <Backdrop />
+        <main key={path} className="rise relative px-4 py-6 sm:px-8">
+          {children}
+        </main>
+      </div>
       <CommandPalette />
     </div>
   );

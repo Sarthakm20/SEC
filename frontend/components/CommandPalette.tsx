@@ -25,20 +25,7 @@ export function openPalette() {
   window.dispatchEvent(new Event("open-palette"));
 }
 
-function toggleTheme() {
-  const root = document.documentElement;
-  const cur = root.dataset.theme ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  const next = cur === "dark" ? "light" : "dark";
-  root.dataset.theme = next;
-  try {
-    localStorage.setItem("theme", next);
-  } catch {
-    /* storage unavailable */
-  }
-  window.dispatchEvent(new Event("theme-change"));
-}
-
-/** Ctrl/⌘+K: jump to a page, ask the research assistant, or flip the theme — all from the keyboard. */
+/** Ctrl/⌘+K: jump to a page or ask the research assistant, all from the keyboard. */
 export function CommandPalette() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -86,10 +73,9 @@ export function CommandPalette() {
         router.push(p.href);
       },
     }));
-    const actions: Item[] = [{ id: "theme", group: "Actions", label: "Toggle light / dark theme", run: () => (toggleTheme(), close()) }];
     const starters: Item[] = STARTERS.map((s) => ({ id: `ask-${s}`, group: "Ask", label: s, run: ask(s) }));
     const match = (i: Item) => !term || i.label.toLowerCase().includes(term) || i.hint?.toLowerCase().includes(term);
-    const filtered = [...pages, ...actions, ...starters].filter(match);
+    const filtered = [...pages, ...starters].filter(match);
     if (term.length >= 3) {
       filtered.unshift({ id: "ask-free", group: "Ask", label: `Ask: “${q.trim()}”`, hint: "Send to the research assistant", run: ask(q.trim()) });
     }

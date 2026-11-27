@@ -31,15 +31,9 @@ export const metadata: Metadata = {
   description: "Verifiable answers from SEC 10-K filings: XBRL facts, deterministic calculations and cited filing passages.",
 };
 
-// Applied before paint so a stored theme choice never flashes.
-const themeScript = `try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${plex.variable} ${serif.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang="en" className={`${plex.variable} ${serif.variable}`}>
       <body>
         <Shell>{children}</Shell>
       </body>

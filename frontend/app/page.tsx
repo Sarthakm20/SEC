@@ -132,7 +132,7 @@ export default function OverviewPage() {
         <div className={`transition-opacity duration-200 ${loading ? "opacity-50" : ""}`} aria-busy={loading}>
           <header className="rise mt-8" key={`${data.company.ticker}-h`}>
             <h1 className="font-serif text-[40px] font-semibold leading-[1.1] tracking-tight">{data.company.name}</h1>
-            <p className="mt-2 text-[15px] text-[var(--ink-2)]">
+            <p className="mt-2 max-w-[58ch] text-[15px] text-[var(--ink-2)]">
               Fiscal {data.fiscal_year}
               {data.kpis[0]?.period_end ? `, ended ${new Date(data.kpis[0].period_end + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}` : ""}.{" "}
               {data.filing ? (
@@ -150,7 +150,7 @@ export default function OverviewPage() {
 
           <section
             key={`${data.company.ticker}-${data.fiscal_year}-k`}
-            className="stagger mt-6 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-[var(--rule)] bg-[var(--rule)] sm:grid-cols-2 lg:grid-cols-4"
+            className="stagger mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
             aria-label="Key figures"
           >
             {data.kpis.map((k) => (
@@ -227,7 +227,7 @@ function Kpi({ k, company }: { k: Overview["kpis"][number]; company: string }) {
   const yoy = k.yoy !== null ? Number(k.yoy) : null;
   const loc = k.fact?.location;
   return (
-    <div className="group relative bg-[var(--panel)] p-5 transition-colors hover:bg-[var(--panel-2)]">
+    <div className="panel group relative p-5">
       <div className="flex items-start justify-between gap-2">
         <div className="text-sm text-[var(--ink-2)]">{k.label}</div>
         <Link
