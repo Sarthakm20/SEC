@@ -59,9 +59,13 @@ export default function OverviewPage() {
   // only years whose 10-K text is ingested, so every year shows its indexed sections
   const years = company ? [...company.years.filings].sort((a, b) => b - a) : [];
 
+  // switching company keeps the fiscal year; a company without that year gets its closest one
   const pickCompany = (t: string) => {
     if (t === ticker) return;
-    setFy(null);
+    const avail = companies.find((c) => c.ticker === t)?.years.filings ?? [];
+    if (fy !== null && avail.length && !avail.includes(fy)) {
+      setFy(avail.reduce((best, y) => (Math.abs(y - fy) < Math.abs(best - fy) ? y : best)));
+    }
     setTicker(t);
   };
 
